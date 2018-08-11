@@ -1,0 +1,20 @@
+name:                jel
+version:             0.1.0.0
+synopsis:            A VI-like editor.
+homepage:            https://jelle.xyz/
+license:             GPL-3
+license-file:        LICENSE
+author:              Jelle Hermsen
+maintainer:          j@jelle.xyz
+category:            Text
+build-type:          Simple
+extra-source-files:  ChangeLog.md, README.md
+cabal-version:       >=1.10
+
+executable jel
+  main-is:             Main.hs
+  default-extensions:  OverloadedStrings
+  build-depends:       base >=4.9 && <4.10, ncurses == 0.2.16,
+                       text == 1.2.2.2, stateref == 0.3
+  hs-source-dirs:      src
+  default-language:    Haskell2010
