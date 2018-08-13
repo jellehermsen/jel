@@ -1,56 +1,56 @@
 module Gui where
 
-import UI.NCurses
+import qualified UI.NCurses as Curses
 
 main :: IO ()
-main = runCurses $ do
-    setEcho False
-    w <- defaultWindow
-    cid <- newColorID ColorYellow ColorBlue 1
-    updateWindow w $ do
-        moveCursor 1 10
-        drawString "Hello world!"
-        moveCursor 3 10
-        drawString "(press q to quit)"
-        moveCursor 0 40 
-        drawLineV (Just glyphLineV) 1000
-        moveCursor 0 0
-        setColor cid
-        drawString "Test this"
-    render
+main = Curses.runCurses $ do
+    Curses.setEcho False
+    w <- Curses.defaultWindow
+    cid <- Curses.newColorID Curses.ColorYellow Curses.ColorBlue 1
+    Curses.updateWindow w $ do
+        Curses.moveCursor 1 10
+        Curses.drawString "Hello world!"
+        Curses.moveCursor 3 10
+        Curses.drawString "(press q to quit)"
+        Curses.moveCursor 0 40 
+        Curses.drawLineV (Just Curses.glyphLineV) 1000
+        Curses.moveCursor 0 0
+        Curses.setColor cid
+        Curses.drawString "Test this"
+    Curses.render
     waitFor w
 
-waitFor :: Window -> Curses ()
+waitFor :: Curses.Window -> Curses.Curses ()
 waitFor w = loop where
     loop = do
-        ev <- getEvent w Nothing
+        ev <- Curses.getEvent w Nothing
         case ev of
             Nothing -> loop
             Just ev' -> do
                 case ev' of
-                    EventCharacter 'l' -> do
-                        cursor <- getCursor w
-                        updateWindow w $ do
-                            moveCursor (fst cursor) (snd cursor + 1)
-                        render
+                    Curses.EventCharacter 'l' -> do
+                        cursor <- Curses.getCursor w
+                        Curses.updateWindow w $ do
+                            Curses.moveCursor (fst cursor) (snd cursor + 1)
+                        Curses.render
                         loop
-                    EventCharacter 'h' -> do
-                        cursor <- getCursor w
-                        updateWindow w $ do
-                            moveCursor (fst cursor) (snd cursor - 1)
-                        render
+                    Curses.EventCharacter 'h' -> do
+                        cursor <- Curses.getCursor w
+                        Curses.updateWindow w $ do
+                            Curses.moveCursor (fst cursor) (snd cursor - 1)
+                        Curses.render
                         loop
-                    EventCharacter 'k' -> do
-                        cursor <- getCursor w
-                        updateWindow w $ do
-                            moveCursor (fst cursor - 1) (snd cursor)
-                        render
+                    Curses.EventCharacter 'k' -> do
+                        cursor <- Curses.getCursor w
+                        Curses.updateWindow w $ do
+                            Curses.moveCursor (fst cursor - 1) (snd cursor)
+                        Curses.render
                         loop
-                    EventCharacter 'j' -> do
-                        cursor <- getCursor w
-                        updateWindow w $ do
-                            moveCursor (fst cursor + 1) (snd cursor)
-                        render
+                    Curses.EventCharacter 'j' -> do
+                        cursor <- Curses.getCursor w
+                        Curses.updateWindow w $ do
+                            Curses.moveCursor (fst cursor + 1) (snd cursor)
+                        Curses.render
                         loop
-                    EventCharacter 'q' -> return ()
+                    Curses.EventCharacter 'q' -> return ()
                     otherwise -> loop

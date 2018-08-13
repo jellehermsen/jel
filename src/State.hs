@@ -21,4 +21,6 @@ data State = State
     , mode :: Types.Mode
     , lastWindowId :: Window.WindowId
     , stateLine :: Text.Text
+    , stateLineHistory :: [Text.Text]
+    , searchHistory :: [Text.Text]
     }
