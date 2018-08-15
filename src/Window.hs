@@ -4,7 +4,7 @@ import qualified Types
 import qualified Buffer
 
 data WindowType = File | Directory | Static
-    deriving (Show, Eq)
+  deriving (Show, Eq)
 
 type WindowId = Types.Id
 
@@ -16,5 +16,4 @@ data Window = Window
     , readonly :: Bool
     , windowType :: WindowType
     , windowRef :: Types.WindowRef
-    }
-
+    } deriving (Show, Eq)
