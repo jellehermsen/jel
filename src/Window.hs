@@ -1,6 +1,23 @@
+{-
+    This file is part of Jel.
+
+    Jel is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
+
+    Jel is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Jel. If not, see <https://www.gnu.org/licenses/>.
+-}
+
 module Window where
 
-import qualified Types
+import Types
 import qualified Buffer
 
 data WindowType = File | Directory | Static
@@ -9,11 +26,22 @@ data WindowType = File | Directory | Static
 type WindowId = Types.Id
 
 data Window = Window
-    { id :: WindowId
-    , buffer :: Buffer.Buffer
+    { windowId :: WindowId
+    , buffer :: Buffer.BufferId
     , scrollPos :: Types.Position
     , cursorPos :: Types.Position
     , readonly :: Bool
     , windowType :: WindowType
-    , windowRef :: Types.WindowRef
-    } deriving (Show, Eq)
+    , cWindow :: CWindow
+    }
+
+newWindow :: WindowId -> Buffer.BufferId -> CWindow -> Window
+newWindow windowId bufferId cWindow = Window
+    { windowId = windowId
+    , buffer = bufferId
+    , scrollPos = (0, 0)
+    , cursorPos = (0, 0)
+    , readonly = False
+    , windowType = File
+    , cWindow = cWindow
+    }

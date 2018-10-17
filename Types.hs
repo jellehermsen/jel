@@ -22,34 +22,9 @@ import qualified UI.NCurses as Curses
 type Id = Int
 type Position = (Int, Int)
 type CWindow = Curses.Window
-
-data Mode = CommandMode | InsertMode | LastLineMode | VisualMode |
-            VisualLineMode | ReplaceMode
-  deriving (Show, Eq)
-
-
-data Command = CmdRight 
-    | CmdLeft
-    | CmdUp
-    | CmdDown
-    | CmdAmount Int
-    | CmdPaste
-    | CmdYank
-    | CmdDeleteLine
-    | CmdDeleteChar
-    | CmdQuit
-
--- All the possible actions in the editor
-data Action = ActIdle
-    -- Command mode actions
-    | ActCursorLeft Int
-    | ActCursorRight Int
-    | ActCursorUp Int
-    | ActCursorDown Int
-    | ActPageUp Int
-    | ActPageDown Int
-    | ActQuit
-
-    -- Insert mode actions
-
-data GuiAction = GuiIdle
+data Action = Idle
+    | CursorLeft {amount :: Int }
+    | CursorRight {amount :: Int }
+    | CursorUp {amount :: Int }
+    | CursorDown {amount :: Int }
+    | PageUp 

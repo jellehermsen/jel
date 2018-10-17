@@ -15,41 +15,14 @@
     along with Jel. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Types where
+module Handler where
 
 import qualified UI.NCurses as Curses
 
-type Id = Int
-type Position = (Int, Int)
-type CWindow = Curses.Window
+import Types
+import qualified State
 
-data Mode = CommandMode | InsertMode | LastLineMode | VisualMode |
-            VisualLineMode | ReplaceMode
-  deriving (Show, Eq)
-
-
-data Command = CmdRight 
-    | CmdLeft
-    | CmdUp
-    | CmdDown
-    | CmdAmount Int
-    | CmdPaste
-    | CmdYank
-    | CmdDeleteLine
-    | CmdDeleteChar
-    | CmdQuit
-
--- All the possible actions in the editor
-data Action = ActIdle
-    -- Command mode actions
-    | ActCursorLeft Int
-    | ActCursorRight Int
-    | ActCursorUp Int
-    | ActCursorDown Int
-    | ActPageUp Int
-    | ActPageDown Int
-    | ActQuit
-
-    -- Insert mode actions
-
-data GuiAction = GuiIdle
+handleActions :: State.State -> [Action] -> Curses.Curses (State.State)
+handleActions state [] = return state
+handleActions state (ActQuit:_) = error "TEST"
+handleActions state (x:xs) = handleActions state xs
