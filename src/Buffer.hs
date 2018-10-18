@@ -17,6 +17,7 @@
 
 module Buffer where
 
+import qualified Data.Sequence as Sequence
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
@@ -32,7 +33,7 @@ data PastEvent = UndoFlag
 
 data Buffer = Buffer
     { bufferId :: Id
-    , bLines :: [Text.Text]
+    , bLines :: Sequence.Seq Text.Text
     , history :: [PastEvent]
     , path :: Text.Text
     , marks :: Marks
@@ -41,7 +42,7 @@ data Buffer = Buffer
 newBuffer :: BufferId -> Buffer
 newBuffer bufferId = Buffer
     { bufferId = bufferId
-    , bLines = [""]
+    , bLines = Sequence.fromList [""]
     , history = []
     , path = ""
     , marks = Map.empty

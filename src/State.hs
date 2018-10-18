@@ -44,12 +44,13 @@ data State = State
     , lastLineCWindow :: CWindow
     , lastLineHistory :: [Text.Text]
     , searchHistory :: [Text.Text]
+    , screenSize :: (Integer, Integer)
     }
 
-newState :: CWindow -> CWindow -> State
-newState firstWindow lastLineWindow = State
+newState :: Window.Window -> CWindow -> (Integer, Integer) -> State
+newState firstWindow lastLineCWindow screenSize = State
     { buffers = Map.insert 0 (Buffer.newBuffer 0) Map.empty
-    , windows = Map.insert 1 (Window.newWindow 1 0 firstWindow) Map.empty
+    , windows = Map.insert 1 firstWindow Map.empty
     , tabs = [[1]]
     , registers = Map.empty
     , activeTab = 0
@@ -60,9 +61,10 @@ newState firstWindow lastLineWindow = State
     , command = []
     , lastCommand = []
     , lastLine = "Woep woep"
-    , lastLineCWindow = lastLineWindow
+    , lastLineCWindow = lastLineCWindow
     , lastLineHistory = []
     , searchHistory = []
+    , screenSize = screenSize
     }
 
 getActiveWindow :: State -> Maybe Window.Window
@@ -72,3 +74,14 @@ getActiveCWindow :: State -> Maybe CWindow
 getActiveCWindow state = case (getActiveWindow state) of
     Nothing  -> Nothing
     Just window -> Just $ Window.cWindow window
+
+getBufferById :: State -> Buffer.BufferId -> Maybe Buffer.Buffer
+getBufferById state bufferId = Map.lookup bufferId (buffers state)
+
+getWindowBuffer :: State -> Window.Window -> Maybe Buffer.Buffer
+getWindowBuffer state window = getBufferById state (Window.buffer window)
+
+insertBuffer :: State -> Buffer.BufferId -> Buffer.Buffer -> State
+insertBuffer state bufferId buffer = state {
+    buffers = Map.insert bufferId buffer (buffers state)
+}

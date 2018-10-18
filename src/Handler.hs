@@ -20,9 +20,18 @@ module Handler where
 import qualified UI.NCurses as Curses
 
 import Types
+import qualified Gui
 import qualified State
+import qualified Window
 
 handleActions :: State.State -> [Action] -> Curses.Curses (State.State)
 handleActions state [] = return state
+
+-- Move cursor down
+handleActions state (ActCursorDown n:xs) = do
+    let w = State.getActiveWindow state
+    Gui.renderAll state
+    handleActions state xs
+
 handleActions state (ActQuit:_) = error "TEST"
 handleActions state (x:xs) = handleActions state xs

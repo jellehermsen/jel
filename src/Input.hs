@@ -21,8 +21,10 @@ import qualified UI.NCurses as Curses
 import Types
 
 parseInput :: Mode -> [Command] -> Curses.Event -> ([Command], [Action])
+parseInput CommandMode _ (Curses.EventCharacter 'j') = ([], [matchAction [CmdDown]])
 parseInput mode cmds ev = (cmds, [matchAction [CmdQuit]]) 
 
 matchAction :: [Command] -> Action
 matchAction [CmdQuit] = ActQuit
+matchAction [CmdDown] = ActCursorDown 1
 matchAction _ = ActIdle

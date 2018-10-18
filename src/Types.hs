@@ -22,11 +22,11 @@ import qualified UI.NCurses as Curses
 type Id = Int
 type Position = (Int, Int)
 type CWindow = Curses.Window
+type ScreenSize = (Integer, Integer)
 
 data Mode = CommandMode | InsertMode | LastLineMode | VisualMode |
             VisualLineMode | ReplaceMode
   deriving (Show, Eq)
-
 
 data Command = CmdRight 
     | CmdLeft
@@ -52,4 +52,9 @@ data Action = ActIdle
 
     -- Insert mode actions
 
+-- All the GUI actions
 data GuiAction = GuiIdle
+    | GuiCursorUp Int
+    | GuiCursorDown Int
+    | GuiCursorLeft Int
+    | GuiCursorRight Int

@@ -1,3 +1,4 @@
+{-
 main :: IO ()
 main = Curses.runCurses $ do
     Curses.setEcho False
@@ -50,3 +51,15 @@ waitFor w = loop where
                         loop
                     Curses.EventCharacter 'q' -> return ()
                     otherwise -> loop
+
+
+case ev' of
+    Curses.EventCharacter 'q' -> return ()
+    Curses.EventCharacter '\ESC' -> return ()
+    otherwise -> do
+        Curses.updateWindow motherWindow $ do
+            Curses.moveCursor 0 0
+            Curses.drawString $ show ev' 
+        Curses.render
+        loop state motherWindow
+-}
