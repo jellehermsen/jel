@@ -45,3 +45,11 @@ newWindow windowId bufferId cWindow = Window
     , windowType = File
     , cWindow = cWindow
     }
+
+getRelativeCursorPos :: Window -> Types.Position
+getRelativeCursorPos window = (cursorY - scrollY, cursorX - scrollX)
+    where
+        scrollX = snd $ scrollPos window
+        scrollY = fst $ scrollPos window
+        cursorX = snd $ cursorPos window
+        cursorY = fst $ cursorPos window

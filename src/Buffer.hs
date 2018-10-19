@@ -47,3 +47,28 @@ newBuffer bufferId = Buffer
     , path = ""
     , marks = Map.empty
     }
+
+lineCount :: Buffer -> Integer
+lineCount buffer =  fromIntegral $ Sequence.length $ bLines buffer
+
+closestPos :: Buffer -> Position -> Position
+closestPos buffer (y, x) = (closestY, closestX)
+    where
+        lengthY = fromIntegral $ lineCount buffer
+        closestY = if y < 0 
+            then 
+                0
+            else 
+                if y >= lengthY then
+                    lengthY - 1
+                else
+                    y
+        line = Sequence.index (bLines buffer) $ fromIntegral closestY
+        closestX = if x < 0
+            then
+                0
+            else 
+                if x >= (fromIntegral (Text.length line)) then
+                    (fromIntegral $ Text.length line) - 1
+                else
+                    x 

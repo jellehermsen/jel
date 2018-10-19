@@ -21,6 +21,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
 import Types
+import Helpers
 import qualified Window
 import qualified Buffer
 
@@ -39,7 +40,7 @@ data State = State
     , lastId :: Id
     , search :: Text.Text
     , command :: [Command]
-    , lastCommand :: [Command]
+    , lastAction :: Action
     , lastLine :: Text.Text
     , lastLineCWindow :: CWindow
     , lastLineHistory :: [Text.Text]
@@ -59,7 +60,7 @@ newState firstWindow lastLineCWindow screenSize = State
     , lastId = 1
     , search = ""
     , command = []
-    , lastCommand = []
+    , lastAction = ActIdle
     , lastLine = "Woep woep"
     , lastLineCWindow = lastLineCWindow
     , lastLineHistory = []
@@ -81,7 +82,50 @@ getBufferById state bufferId = Map.lookup bufferId (buffers state)
 getWindowBuffer :: State -> Window.Window -> Maybe Buffer.Buffer
 getWindowBuffer state window = getBufferById state (Window.buffer window)
 
+getActiveWindowAndBuffer :: State -> Maybe (Window.Window, Buffer.Buffer)
+getActiveWindowAndBuffer state = case getActiveWindow state of
+    Nothing -> Nothing
+    Just window -> case getBufferById state (Window.buffer window) of
+        Nothing -> Nothing
+        Just buffer -> Just (window, buffer)
+
 insertBuffer :: State -> Buffer.BufferId -> Buffer.Buffer -> State
 insertBuffer state bufferId buffer = state {
     buffers = Map.insert bufferId buffer (buffers state)
 }
+
+changeState :: State -> Action -> (Maybe State, [Event])
+
+-- Move cursor down
+changeState state (ActCursorDown n) = moveCursor state (n, 0)
+
+-- Move cursor up
+changeState state (ActCursorUp n) = moveCursor state (-n, 0)
+
+-- Move cursor left
+changeState state (ActCursorLeft n) = moveCursor state (0, -n)
+
+-- Move cursor right
+changeState state (ActCursorRight n) = moveCursor state (0, n)
+
+-- Page down
+changeState state (ActPageDown n) = moveCursor state(10, 0)
+
+-- Page up
+changeState state (ActPageUp n) = moveCursor state(-10, 0)
+
+changeState state _ = (Just state, [EvQuit])
+
+-- Take scrolling into account
+moveCursor :: State -> Position -> (Maybe State, [Event])
+moveCursor state dPos = case (getActiveWindowAndBuffer state) of
+    Nothing -> (Nothing, [])
+    Just (window, buffer) -> 
+        let 
+            (y, x) = Buffer.closestPos buffer (addPos dPos (Window.cursorPos window))
+            newWindow = window { Window.cursorPos = (y, x)} 
+        in
+            (Just state {
+                windows = Map.insert (Window.windowId window) newWindow (State.windows state)}
+            , [EvCursorTo y x]) 
+

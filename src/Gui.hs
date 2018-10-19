@@ -40,6 +40,13 @@ drawTextAt y x text = do
     Curses.moveCursor y x
     Curses.drawText text
 
+resetCursor :: Window.Window -> Curses.Update ()
+resetCursor window = Curses.moveCursor y x
+    where
+        cursorPos = Window.getRelativeCursorPos window
+        x = snd cursorPos
+        y = fst cursorPos
+
 renderAll :: State.State -> Curses.Curses ()
 renderAll state = do
     case (State.getActiveWindow state) of
@@ -54,4 +61,5 @@ renderAll state = do
                         let lines = fmap (prepLine width) $ Buffer.bLines b
                         let count = (fromIntegral $ Sequence.length lines) - 1
                         mapM (\y -> drawTextAt y 0 (Sequence.index lines (fromIntegral y))) [0..count]
+                resetCursor window
             return ()

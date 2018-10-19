@@ -15,7 +15,7 @@
     along with Jel. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Handler where
+module Event where
 
 import qualified UI.NCurses as Curses
 
@@ -24,14 +24,11 @@ import qualified Gui
 import qualified State
 import qualified Window
 
-handleActions :: State.State -> [Action] -> Curses.Curses (State.State)
-handleActions state [] = return state
+handleEvent :: State.State -> Event -> Curses.Curses (State.State)
 
 -- Move cursor down
-handleActions state (ActCursorDown n:xs) = do
-    let w = State.getActiveWindow state
-    Gui.renderAll state
-    handleActions state xs
+handleEvent state (EvCursorTo y x) = do
+    return state
 
-handleActions state (ActQuit:_) = error "TEST"
-handleActions state (x:xs) = handleActions state xs
+handleEvent state EvQuit = error "TEST"
+handleEvent state _ = return state

@@ -20,7 +20,7 @@ module Types where
 import qualified UI.NCurses as Curses
 
 type Id = Int
-type Position = (Int, Int)
+type Position = (Integer, Integer)
 type CWindow = Curses.Window
 type ScreenSize = (Integer, Integer)
 
@@ -32,7 +32,9 @@ data Command = CmdRight
     | CmdLeft
     | CmdUp
     | CmdDown
-    | CmdAmount Int
+    | CmdPageDown
+    | CmdPageUp
+    | CmdAmount Integer
     | CmdPaste
     | CmdYank
     | CmdDeleteLine
@@ -42,19 +44,19 @@ data Command = CmdRight
 -- All the possible actions in the editor
 data Action = ActIdle
     -- Command mode actions
-    | ActCursorLeft Int
-    | ActCursorRight Int
-    | ActCursorUp Int
-    | ActCursorDown Int
-    | ActPageUp Int
-    | ActPageDown Int
+    | ActCursorLeft Integer
+    | ActCursorRight Integer
+    | ActCursorUp Integer
+    | ActCursorDown Integer
+    | ActPageUp Integer
+    | ActPageDown Integer
     | ActQuit
 
     -- Insert mode actions
 
 -- All the GUI actions
-data GuiAction = GuiIdle
-    | GuiCursorUp Int
-    | GuiCursorDown Int
-    | GuiCursorLeft Int
-    | GuiCursorRight Int
+data Event = EvIdle
+    | EvCursorTo Integer Integer
+    | EvOpenFile
+    | EvSaveFile
+    | EvQuit

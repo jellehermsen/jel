@@ -13,7 +13,7 @@ cabal-version:       >=1.10
 
 executable jel
   main-is:             Main.hs
-  other-modules:       Types, Window, Buffer, State
+  other-modules:       Types, Window, Buffer, State, Helpers, Gui, Event
   default-extensions:  OverloadedStrings
   build-depends:       base >=4.9 && <4.10, ncurses == 0.2.16,
                        text == 1.2.2.2, containers == 0.5.7.1
