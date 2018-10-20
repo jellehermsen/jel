@@ -114,6 +114,7 @@ changeState state (ActPageDown n) = moveCursor state(10, 0)
 -- Page up
 changeState state (ActPageUp n) = moveCursor state(-10, 0)
 
+changeState state ActIdle = (Nothing, [EvIdle])
 changeState state _ = (Just state, [EvQuit])
 
 -- Take scrolling into account
