@@ -35,10 +35,14 @@ getWindowSize w = Curses.updateWindow w $ do
 prepLine :: Integer -> Text.Text -> Text.Text
 prepLine width line = Text.take (fromIntegral width) line
 
-drawTextAt :: Integer -> Integer -> Text.Text -> Curses.Update ()
-drawTextAt y x text = do
-    Curses.moveCursor y x
-    Curses.drawText text
+drawTextAt :: Integer -> Integer -> Size -> Text.Text -> Curses.Update ()
+drawTextAt y x (windowHeight, windowWidth) text = do
+    if (y >= 0 && y < windowHeight && x >= 0 && x < windowWidth) then do
+        Curses.moveCursor y x
+        Curses.drawText text
+        return ()
+    else
+        return ()
 
 resetCursor :: Window.Window -> Curses.Update ()
 resetCursor window = Curses.moveCursor y x
@@ -54,12 +58,13 @@ renderAll state = do
         Just window -> do
             let cw = Window.cWindow window
             let buffer = State.getWindowBuffer state window
-            let width = snd $ State.screenSize state
+            let width = snd $ Window.size window
+            let height = fst $ Window.size window 
             Curses.updateWindow cw $ do
                 case buffer of
                     Just b -> do
                         let lines = fmap (prepLine width) $ Buffer.bLines b
                         let count = (fromIntegral $ Sequence.length lines) - 1
-                        mapM (\y -> drawTextAt y 0 (Sequence.index lines (fromIntegral y))) [0..count]
+                        mapM (\y -> drawTextAt y 0 (Window.size window) (Sequence.index lines (fromIntegral y))) [0..count]
                 resetCursor window
             return ()

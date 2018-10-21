@@ -22,7 +22,7 @@ import qualified UI.NCurses as Curses
 type Id = Int
 type Position = (Integer, Integer)
 type CWindow = Curses.Window
-type ScreenSize = (Integer, Integer)
+type Size = (Integer, Integer)
 
 data Mode = CommandMode | InsertMode | LastLineMode | VisualMode |
             VisualLineMode | ReplaceMode

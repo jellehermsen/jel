@@ -41,7 +41,7 @@ main = Curses.runCurses $ do
 
     firstCWindow <- Curses.newWindow (snd screenSize - 1) (snd screenSize) 0 0
     let firstBuffer = (Buffer.newBuffer 0){Buffer.bLines = dummyText}
-    let firstWindow = Window.newWindow 1 0 firstCWindow
+    let firstWindow = Window.newWindow 1 0 firstCWindow (fst screenSize - 1, snd screenSize)
     lastLineCWindow <- Curses.newWindow 1 (snd screenSize) (fst screenSize - 1) 0
 
     let state = State.insertBuffer (State.newState firstWindow lastLineCWindow screenSize) 0 firstBuffer

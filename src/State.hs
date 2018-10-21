@@ -45,7 +45,7 @@ data State = State
     , lastLineCWindow :: CWindow
     , lastLineHistory :: [Text.Text]
     , searchHistory :: [Text.Text]
-    , screenSize :: (Integer, Integer)
+    , screenSize :: Size
     }
 
 newState :: Window.Window -> CWindow -> (Integer, Integer) -> State
@@ -117,6 +117,10 @@ changeState state (ActPageUp n) = moveCursor state(-10, 0)
 changeState state ActIdle = (Nothing, [EvIdle])
 changeState state _ = (Just state, [EvQuit])
 
+-- Set the scroll position in a window
+setScrollPos :: Window.Window -> Window.Window -> Window.Window
+setScrollPos old new = new
+
 -- Take scrolling into account
 moveCursor :: State -> Position -> (Maybe State, [Event])
 moveCursor state dPos = case (getActiveWindowAndBuffer state) of
@@ -127,6 +131,6 @@ moveCursor state dPos = case (getActiveWindowAndBuffer state) of
             newWindow = window { Window.cursorPos = (y, x)} 
         in
             (Just state {
-                windows = Map.insert (Window.windowId window) newWindow (State.windows state)}
+                windows = Map.insert (Window.windowId window) (setScrollPos window newWindow) (State.windows state)}
             , [EvCursorTo y x]) 
 

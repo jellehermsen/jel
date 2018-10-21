@@ -31,16 +31,18 @@ data Window = Window
     , scrollPos :: Types.Position
     , cursorPos :: Types.Position
     , readonly :: Bool
+    , size :: Size
     , windowType :: WindowType
     , cWindow :: CWindow
     }
 
-newWindow :: WindowId -> Buffer.BufferId -> CWindow -> Window
-newWindow windowId bufferId cWindow = Window
+newWindow :: WindowId -> Buffer.BufferId -> CWindow -> Size -> Window
+newWindow windowId bufferId cWindow size = Window
     { windowId = windowId
     , buffer = bufferId
     , scrollPos = (0, 0)
     , cursorPos = (0, 0)
+    , size = size
     , readonly = False
     , windowType = File
     , cWindow = cWindow
