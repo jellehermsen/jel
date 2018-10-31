@@ -33,3 +33,11 @@ cabal install --only-dependencies
 cabal build
 `
 
+If you're not on a Debian-like system you can use the package manager on your
+platform. If you're on OS X you can use:
+
+`
+cabal install c2hs
+`
+
+
