@@ -52,23 +52,23 @@ lineCount :: Buffer -> Int
 lineCount buffer =  Sequence.length $ bLines buffer
 
 closestPos :: Buffer -> Position -> Position
-closestPos buffer (y, x) = (closestY, closestX)
+closestPos buffer (row, col) = (closestRow, closestCol)
     where
-        lengthY = fromIntegral $ lineCount buffer
-        closestY = if y < 0 
+        lengthRow = fromIntegral $ lineCount buffer
+        closestRow = if row < 0 
             then 
                 0
             else 
-                if y >= lengthY then
-                    lengthY - 1
+                if row >= lengthRow then
+                    lengthRow - 1
                 else
-                    y
-        line = Sequence.index (bLines buffer) $ fromIntegral closestY
-        closestX = if x < 0
+                    row
+        line = Sequence.index (bLines buffer) $ fromIntegral closestRow
+        closestCol = if col < 0
             then
                 0
             else 
-                if x >= (fromIntegral (Text.length line)) then
+                if col >= (fromIntegral (Text.length line)) then
                     (fromIntegral $ Text.length line) - 1
                 else
-                    x 
+                    col 

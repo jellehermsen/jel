@@ -137,10 +137,10 @@ moveCursor state dPos = case (getActiveWindowAndBuffer state) of
     Nothing -> (Nothing, [])
     Just (window, buffer) -> 
         let 
-            (y, x) = Buffer.closestPos buffer (addPos dPos (Window.cursorPos window))
-            newWindow = window { Window.cursorPos = (y, x)} 
+            (row, col) = Buffer.closestPos buffer (addPos dPos (Window.cursorPos window))
+            newWindow = window { Window.cursorPos = (row, col)} 
         in
             (Just state {
                 windows = Map.insert (Window.windowId window) (setScrollPos newWindow) (State.windows state)}
-            , [EvCursorTo y x]) 
+            , [EvCursorTo row col]) 
 

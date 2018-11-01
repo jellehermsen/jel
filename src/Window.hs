@@ -53,9 +53,9 @@ getRelativeCursorPos :: Window -> Types.Position
 getRelativeCursorPos w = subV2 (cursorPos w) (scrollPos w)
 
 viewPort :: Window -> V4
-viewPort w = (fromY, fromX, toY, toX)
+viewPort w = (fromRow, fromCol, toRow, toCol)
     where
-        (fromY, fromX) = scrollPos w
+        (fromRow, fromCol) = scrollPos w
         (height, width) = size w
-        toY = fromY + height - 1
-        toX = fromX + width - 1
+        toRow = fromRow + height - 1
+        toCol = fromCol + width - 1

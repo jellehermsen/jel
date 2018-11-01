@@ -36,20 +36,20 @@ prepLine :: Int -> Int -> Text.Text -> Text.Text
 prepLine from width line = Text.take (fromIntegral width) $ Text.drop (fromIntegral from) line
 
 drawTextAt :: Int -> Int -> Size -> Text.Text -> Curses.Update ()
-drawTextAt y x (windowHeight, windowWidth) text = do
-    if (y >= 0 && y < windowHeight && x >= 0 && x < windowWidth) then do
-        Curses.moveCursor (toInteger y)  (toInteger x)
+drawTextAt row col (windowHeight, windowWidth) text = do
+    if (row >= 0 && row < windowHeight && col >= 0 && col < windowWidth) then do
+        Curses.moveCursor (toInteger row) (toInteger col)
         Curses.drawText text
         return ()
     else
         return ()
 
 resetCursor :: Window.Window -> Curses.Update ()
-resetCursor window = Curses.moveCursor (toInteger y) (toInteger x)
+resetCursor window = Curses.moveCursor (toInteger row) (toInteger col)
     where
         cursorPos = Window.getRelativeCursorPos window
-        x = snd cursorPos
-        y = fst cursorPos
+        col = snd cursorPos
+        row = fst cursorPos
 
 renderAll :: State.State -> Curses.Curses ()
 renderAll state = do
@@ -60,15 +60,15 @@ renderAll state = do
             let buffer = State.getWindowBuffer state window
             let width = snd $ Window.size window
             let height = fst $ Window.size window 
-            let scrollX  = snd $ Window.scrollPos window
-            let scrollY  = fst $ Window.scrollPos window
+            let scrollCol  = snd $ Window.scrollPos window
+            let scrollRow  = fst $ Window.scrollPos window
             Curses.updateWindow cw $ do
                 Curses.clear
                 case buffer of
                     Just b -> do
-                        let lines = fmap (prepLine scrollX width) $ Sequence.drop (fromIntegral scrollY) (Buffer.bLines b)
+                        let lines = fmap (prepLine scrollCol width) $ Sequence.drop (fromIntegral scrollRow) (Buffer.bLines b)
                         let count = (fromIntegral $ Sequence.length lines) - 1
                         mapM (\y -> drawTextAt y 0 (Window.size window) (Sequence.index lines (fromIntegral y))) [0..count]
-                drawTextAt (height - 10) 0 (width, height) (Text.pack (show (Window.scrollPos window )))
+                -- drawTextAt (height - 10) 0 (width, height) (Text.pack (show (Window.scrollPos window )))
                 resetCursor window
             return ()

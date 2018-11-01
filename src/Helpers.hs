@@ -21,25 +21,19 @@ import Types
 
 
 addPos :: Position -> Position -> Position
-addPos (y1, x1) (y2, x2) = (y1 + y2, x1 + x2)
-
-posX :: Position -> Int
-posX (_, x) = x
-
-posY :: Position -> Int
-posY (y, _) = y
+addPos (row1, col1) (row2, col2) = (row1 + row2, col1 + col2)
 
 posInRange :: Position -> V4 -> Bool
-posInRange (y, x) (fromY, fromX, toY, toX) = 
-    y >= fromY && y <= toY
+posInRange (row, col) (fromRow, fromCol, toRow, toCol) = 
+    row >= fromRow && row <= toRow
     &&
-    x >= fromX && x <= toX
+    col >= fromCol && col <= toCol
 
 posDiff :: Position -> V4 -> V2
-posDiff (y, x) (fromY, fromX, toY, toX) =
+posDiff (row, col) (fromRow, fromCol, toRow, toCol) =
     (
-        if y < fromY then y - fromY else if y > toY then y - toY else 0,
-        if x < fromX then x - fromX else if x > toX then x - toX else 0
+        if row < fromRow then row - fromRow else if row > toRow then row - toRow else 0,
+        if col < fromCol then col - fromCol else if col > toCol then col - toCol else 0
     )
 
 addV2 :: V2 -> V2 -> V2
