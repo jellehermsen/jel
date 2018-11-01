@@ -19,10 +19,12 @@ module Types where
 
 import qualified UI.NCurses as Curses
 
+type V2 = (Integer, Integer)
+type V4 = (Integer, Integer, Integer, Integer)
 type Id = Int
-type Position = (Integer, Integer)
+type Position = V2
 type CWindow = Curses.Window
-type Size = (Integer, Integer)
+type Size = V2
 
 data Mode = CommandMode | InsertMode | LastLineMode | VisualMode |
             VisualLineMode | ReplaceMode

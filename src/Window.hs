@@ -17,6 +17,7 @@
 
 module Window where
 
+import Helpers
 import Types
 import qualified Buffer
 
@@ -49,9 +50,12 @@ newWindow windowId bufferId cWindow size = Window
     }
 
 getRelativeCursorPos :: Window -> Types.Position
-getRelativeCursorPos window = (cursorY - scrollY, cursorX - scrollX)
+getRelativeCursorPos w = subV2 (cursorPos w) (scrollPos w)
+
+viewPort :: Window -> V4
+viewPort w = (fromY, fromX, toY, toX)
     where
-        scrollX = snd $ scrollPos window
-        scrollY = fst $ scrollPos window
-        cursorX = snd $ cursorPos window
-        cursorY = fst $ cursorPos window
+        (fromY, fromX) = scrollPos w
+        (height, width) = size w
+        toY = fromY + height - 1
+        toX = fromX + width - 1

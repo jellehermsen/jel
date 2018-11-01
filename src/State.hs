@@ -109,17 +109,27 @@ changeState state (ActCursorLeft n) = moveCursor state (0, -n)
 changeState state (ActCursorRight n) = moveCursor state (0, n)
 
 -- Page down
-changeState state (ActPageDown n) = moveCursor state(10, 0)
+changeState state (ActPageDown n) = moveCursor state (10, 0)
 
 -- Page up
-changeState state (ActPageUp n) = moveCursor state(-10, 0)
+changeState state (ActPageUp n) = moveCursor state (-10, 0)
 
 changeState state ActIdle = (Nothing, [EvIdle])
 changeState state _ = (Just state, [EvQuit])
 
 -- Set the scroll position in a window
-setScrollPos :: Window.Window -> Window.Window -> Window.Window
-setScrollPos old new = new
+setScrollPos :: Window.Window -> Window.Window
+setScrollPos w = if inWindow 
+    then 
+        w 
+    else 
+        w {Window.scrollPos = newScrollPos}
+    where
+        viewPort = Window.viewPort w
+        inWindow = posInRange (Window.cursorPos w) viewPort
+        diff = posDiff (Window.cursorPos w) viewPort
+        newScrollPos = addV2 (Window.scrollPos w) diff
+
 
 -- Take scrolling into account
 moveCursor :: State -> Position -> (Maybe State, [Event])
@@ -131,6 +141,6 @@ moveCursor state dPos = case (getActiveWindowAndBuffer state) of
             newWindow = window { Window.cursorPos = (y, x)} 
         in
             (Just state {
-                windows = Map.insert (Window.windowId window) (setScrollPos window newWindow) (State.windows state)}
+                windows = Map.insert (Window.windowId window) (setScrollPos newWindow) (State.windows state)}
             , [EvCursorTo y x]) 
 

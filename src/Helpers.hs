@@ -19,6 +19,7 @@ module Helpers where
 
 import Types
 
+
 addPos :: Position -> Position -> Position
 addPos (y1, x1) (y2, x2) = (y1 + y2, x1 + x2)
 
@@ -27,3 +28,22 @@ posX (_, x) = x
 
 posY :: Position -> Integer
 posY (y, _) = y
+
+posInRange :: Position -> V4 -> Bool
+posInRange (y, x) (fromY, fromX, toY, toX) = 
+    y >= fromY && y <= toY
+    &&
+    x >= fromX && x <= toX
+
+posDiff :: Position -> V4 -> V2
+posDiff (y, x) (fromY, fromX, toY, toX) =
+    (
+        if y < fromY then y - fromY else if y > toY then y - toY else 0,
+        if x < fromX then x - fromX else if x > toX then x - toX else 0
+    )
+
+addV2 :: V2 -> V2 -> V2
+addV2 (a, b) (c, d) = (a+c, b+d)
+
+subV2 :: V2 -> V2 -> V2
+subV2 (a, b) (c, d) = (a-c, b-d)

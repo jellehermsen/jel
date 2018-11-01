@@ -32,8 +32,8 @@ getWindowSize w = Curses.updateWindow w $ do
     size <- Curses.windowSize
     return size
 
-prepLine :: Integer -> Text.Text -> Text.Text
-prepLine width line = Text.take (fromIntegral width) line
+prepLine :: Integer -> Integer -> Text.Text -> Text.Text
+prepLine from width line = Text.take (fromIntegral width) $ Text.drop (fromIntegral from) line
 
 drawTextAt :: Integer -> Integer -> Size -> Text.Text -> Curses.Update ()
 drawTextAt y x (windowHeight, windowWidth) text = do
@@ -60,11 +60,15 @@ renderAll state = do
             let buffer = State.getWindowBuffer state window
             let width = snd $ Window.size window
             let height = fst $ Window.size window 
+            let scrollX  = snd $ Window.scrollPos window
+            let scrollY  = fst $ Window.scrollPos window
             Curses.updateWindow cw $ do
+                Curses.clear
                 case buffer of
                     Just b -> do
-                        let lines = fmap (prepLine width) $ Buffer.bLines b
+                        let lines = fmap (prepLine scrollX width) $ Sequence.drop (fromIntegral scrollY) (Buffer.bLines b)
                         let count = (fromIntegral $ Sequence.length lines) - 1
                         mapM (\y -> drawTextAt y 0 (Window.size window) (Sequence.index lines (fromIntegral y))) [0..count]
+                drawTextAt (height - 10) 0 (width, height) (Text.pack (show (Window.scrollPos window )))
                 resetCursor window
             return ()
