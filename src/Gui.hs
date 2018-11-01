@@ -27,25 +27,25 @@ import qualified Buffer
 import qualified State
 import qualified Window
 
-getWindowSize :: CWindow -> Curses.Curses (Integer, Integer)
+getWindowSize :: CWindow -> Curses.Curses V2
 getWindowSize w = Curses.updateWindow w $ do
-    size <- Curses.windowSize
-    return size
+    (height, width) <- Curses.windowSize
+    return (fromInteger height, fromInteger width)
 
-prepLine :: Integer -> Integer -> Text.Text -> Text.Text
+prepLine :: Int -> Int -> Text.Text -> Text.Text
 prepLine from width line = Text.take (fromIntegral width) $ Text.drop (fromIntegral from) line
 
-drawTextAt :: Integer -> Integer -> Size -> Text.Text -> Curses.Update ()
+drawTextAt :: Int -> Int -> Size -> Text.Text -> Curses.Update ()
 drawTextAt y x (windowHeight, windowWidth) text = do
     if (y >= 0 && y < windowHeight && x >= 0 && x < windowWidth) then do
-        Curses.moveCursor y x
+        Curses.moveCursor (toInteger y)  (toInteger x)
         Curses.drawText text
         return ()
     else
         return ()
 
 resetCursor :: Window.Window -> Curses.Update ()
-resetCursor window = Curses.moveCursor y x
+resetCursor window = Curses.moveCursor (toInteger y) (toInteger x)
     where
         cursorPos = Window.getRelativeCursorPos window
         x = snd cursorPos

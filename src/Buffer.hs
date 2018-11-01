@@ -48,8 +48,8 @@ newBuffer bufferId = Buffer
     , marks = Map.empty
     }
 
-lineCount :: Buffer -> Integer
-lineCount buffer =  fromIntegral $ Sequence.length $ bLines buffer
+lineCount :: Buffer -> Int
+lineCount buffer =  Sequence.length $ bLines buffer
 
 closestPos :: Buffer -> Position -> Position
 closestPos buffer (y, x) = (closestY, closestX)

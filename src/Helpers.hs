@@ -23,10 +23,10 @@ import Types
 addPos :: Position -> Position -> Position
 addPos (y1, x1) (y2, x2) = (y1 + y2, x1 + x2)
 
-posX :: Position -> Integer
+posX :: Position -> Int
 posX (_, x) = x
 
-posY :: Position -> Integer
+posY :: Position -> Int
 posY (y, _) = y
 
 posInRange :: Position -> V4 -> Bool

@@ -37,14 +37,14 @@ main = Curses.runCurses $ do
     Curses.setCursorMode Curses.CursorVeryVisible
 
     motherCWindow <- Curses.defaultWindow
-    screenSize <- Gui.getWindowSize motherCWindow
+    (screenHeight, screenWidth) <- Gui.getWindowSize motherCWindow
 
-    firstCWindow <- Curses.newWindow (snd screenSize - 1) (snd screenSize) 0 0
+    firstCWindow <- Curses.newWindow (toInteger (screenWidth - 1)) (toInteger screenWidth) 0 0
     let firstBuffer = (Buffer.newBuffer 0){Buffer.bLines = dummyText}
-    let firstWindow = Window.newWindow 1 0 firstCWindow (fst screenSize - 1, snd screenSize)
-    lastLineCWindow <- Curses.newWindow 1 (snd screenSize) (fst screenSize - 1) 0
+    let firstWindow = Window.newWindow 1 0 firstCWindow (screenHeight - 1, screenWidth)
+    lastLineCWindow <- Curses.newWindow 1 (toInteger screenHeight) (toInteger (screenWidth - 1)) 0
 
-    let state = State.insertBuffer (State.newState firstWindow lastLineCWindow screenSize) 0 firstBuffer
+    let state = State.insertBuffer (State.newState firstWindow lastLineCWindow (screenHeight, screenWidth)) 0 firstBuffer
     Gui.renderAll state
     Curses.render
     loop state motherCWindow

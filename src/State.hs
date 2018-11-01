@@ -48,7 +48,7 @@ data State = State
     , screenSize :: Size
     }
 
-newState :: Window.Window -> CWindow -> (Integer, Integer) -> State
+newState :: Window.Window -> CWindow -> V2 -> State
 newState firstWindow lastLineCWindow screenSize = State
     { buffers = Map.insert 0 (Buffer.newBuffer 0) Map.empty
     , windows = Map.insert 1 firstWindow Map.empty
