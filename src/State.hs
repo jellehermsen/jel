@@ -17,6 +17,7 @@
 
 module State where
 
+import Data.Maybe (isNothing)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
@@ -114,6 +115,15 @@ changeState state (ActPageDown n) = moveCursor state (10, 0)
 -- Page up
 changeState state (ActPageUp n) = moveCursor state (-10, 0)
 
+-- End of line
+changeState state (ActEndOfLine n) = 
+    if isNothing newState then
+        (Nothing, [])
+    else
+        (newState, events)
+    where
+        (newState, events) = moveCursor state (n, 0)
+
 changeState state ActIdle = (Nothing, [EvIdle])
 changeState state _ = (Just state, [EvQuit])
 
@@ -140,7 +150,9 @@ moveCursor state dPos = case (getActiveWindowAndBuffer state) of
             (row, col) = Buffer.closestPos buffer (addPos dPos (Window.cursorPos window))
             newWindow = window { Window.cursorPos = (row, col)} 
         in
-            (Just state {
-                windows = Map.insert (Window.windowId window) (setScrollPos newWindow) (State.windows state)}
-            , [EvCursorTo row col]) 
-
+            if (Window.cursorPos window) /= (row, col) then
+                (Just state {
+                    windows = Map.insert (Window.windowId window) (setScrollPos newWindow) (State.windows state)}
+                , [EvCursorTo row col]) 
+            else
+                (Nothing, [])

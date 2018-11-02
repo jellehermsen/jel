@@ -42,6 +42,7 @@ data Command = CmdRight
     | CmdDeleteLine
     | CmdDeleteChar
     | CmdQuit
+    | CmdEndOfLine
 
 -- All the possible actions in the editor
 data Action = ActIdle
@@ -53,6 +54,7 @@ data Action = ActIdle
     | ActPageUp Int
     | ActPageDown Int
     | ActQuit
+    | ActEndOfLine Int
 
     -- Insert mode actions
 

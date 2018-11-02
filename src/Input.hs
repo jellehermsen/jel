@@ -55,6 +55,9 @@ parseInput CommandMode [] (Curses.EventCharacter 'h') = ([], [matchAction [CmdLe
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'l') = ([], [matchAction [CmdAmount n, CmdRight]])
 parseInput CommandMode [] (Curses.EventCharacter 'l') = ([], [matchAction [CmdRight]])
 
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '$') = ([], [matchAction [CmdAmount n, CmdEndOfLine]])
+parseInput CommandMode [] (Curses.EventCharacter '$') = ([], [matchAction [CmdEndOfLine]])
+
 parseInput CommandMode [] (Curses.EventCharacter '\EOT') = ([], [matchAction [CmdPageDown]])
 parseInput CommandMode [] (Curses.EventCharacter '\NAK') = ([], [matchAction [CmdPageUp]])
 parseInput mode cmds ev = error $ show ev
@@ -72,6 +75,9 @@ matchAction [CmdLeft] = ActCursorLeft 1
 
 matchAction [CmdAmount n, CmdRight] = ActCursorRight n
 matchAction [CmdRight] = ActCursorRight 1
+
+matchAction [CmdAmount n, CmdEndOfLine] = ActEndOfLine n 
+matchAction [CmdEndOfLine] = ActEndOfLine 0
 
 matchAction [CmdPageDown] = ActPageDown 1
 matchAction [CmdPageUp] = ActPageUp 1
