@@ -116,13 +116,22 @@ changeState state (ActPageDown n) = moveCursor state (10, 0)
 changeState state (ActPageUp n) = moveCursor state (-10, 0)
 
 -- End of line
-changeState state (ActEndOfLine n) = 
-    if isNothing newState then
-        (Nothing, [])
-    else
-        (newState, events)
-    where
-        (newState, events) = moveCursor state (n, 0)
+changeState state (ActEndOfLine) = case (getActiveWindowAndBuffer state) of
+    Nothing -> (Nothing, [])
+    Just (window, buffer) -> 
+        let
+            cursorPos = Window.cursorPos window
+            line = Buffer.lineForPos buffer cursorPos
+        in
+            case line of
+                Nothing -> (Nothing, [])
+                (Just text) -> moveCursor state (0, Text.length text - (snd cursorPos))
+
+-- Beginning of line
+changeState state (ActBeginningOfLine) = case (getActiveWindow state) of
+    Nothing -> (Nothing, [])
+    Just window -> 
+        moveCursor state (0, -(snd (Window.cursorPos window)))
 
 changeState state ActIdle = (Nothing, [EvIdle])
 changeState state _ = (Just state, [EvQuit])
@@ -143,6 +152,7 @@ setScrollPos w = if inWindow
 
 -- Take scrolling into account
 moveCursor :: State -> Position -> (Maybe State, [Event])
+moveCursor state (0, 0) = (Just state, [])
 moveCursor state dPos = case (getActiveWindowAndBuffer state) of
     Nothing -> (Nothing, [])
     Just (window, buffer) -> 

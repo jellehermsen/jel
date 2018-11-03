@@ -51,6 +51,9 @@ newBuffer bufferId = Buffer
 lineCount :: Buffer -> Int
 lineCount buffer =  Sequence.length $ bLines buffer
 
+lineForPos :: Buffer -> Position -> Maybe Text.Text
+lineForPos buf (row, _) = Sequence.lookup row $ bLines buf
+
 closestPos :: Buffer -> Position -> Position
 closestPos buffer (row, col) = (closestRow, closestCol)
     where
