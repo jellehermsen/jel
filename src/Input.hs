@@ -20,50 +20,53 @@ module Input where
 import qualified UI.NCurses as Curses
 import Types
 
-parseInput :: Mode -> [Command] -> Curses.Event -> ([Command], [Action])
+parseInput :: Mode -> [Command] -> Curses.Event -> Either [Command] [Action]
 
 -- Numbers
-parseInput CommandMode [] (Curses.EventCharacter '1') = ([CmdAmount 1], [ActIdle])
-parseInput CommandMode [] (Curses.EventCharacter '2') = ([CmdAmount 2], [ActIdle])
-parseInput CommandMode [] (Curses.EventCharacter '3') = ([CmdAmount 3], [ActIdle])
-parseInput CommandMode [] (Curses.EventCharacter '4') = ([CmdAmount 4], [ActIdle])
-parseInput CommandMode [] (Curses.EventCharacter '5') = ([CmdAmount 5], [ActIdle])
-parseInput CommandMode [] (Curses.EventCharacter '6') = ([CmdAmount 6], [ActIdle])
-parseInput CommandMode [] (Curses.EventCharacter '7') = ([CmdAmount 7], [ActIdle])
-parseInput CommandMode [] (Curses.EventCharacter '8') = ([CmdAmount 8], [ActIdle])
-parseInput CommandMode [] (Curses.EventCharacter '9') = ([CmdAmount 9], [ActIdle])
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '1') = ([CmdAmount (n*10+1)], [ActIdle])
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '2') = ([CmdAmount (n*10+2)], [ActIdle])
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '3') = ([CmdAmount (n*10+3)], [ActIdle])
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '4') = ([CmdAmount (n*10+4)], [ActIdle])
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '5') = ([CmdAmount (n*10+5)], [ActIdle])
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '6') = ([CmdAmount (n*10+6)], [ActIdle])
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '7') = ([CmdAmount (n*10+7)], [ActIdle])
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '8') = ([CmdAmount (n*10+8)], [ActIdle])
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '9') = ([CmdAmount (n*10+9)], [ActIdle])
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '0') = ([CmdAmount (n*10)], [ActIdle])
+parseInput CommandMode [] (Curses.EventCharacter '1') = Left [CmdAmount 1]
+parseInput CommandMode [] (Curses.EventCharacter '2') = Left [CmdAmount 2]
+parseInput CommandMode [] (Curses.EventCharacter '3') = Left [CmdAmount 3]
+parseInput CommandMode [] (Curses.EventCharacter '4') = Left [CmdAmount 4]
+parseInput CommandMode [] (Curses.EventCharacter '5') = Left [CmdAmount 5]
+parseInput CommandMode [] (Curses.EventCharacter '6') = Left [CmdAmount 6]
+parseInput CommandMode [] (Curses.EventCharacter '7') = Left [CmdAmount 7]
+parseInput CommandMode [] (Curses.EventCharacter '8') = Left [CmdAmount 8]
+parseInput CommandMode [] (Curses.EventCharacter '9') = Left [CmdAmount 9]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '1') = Left [CmdAmount (n*10+1)]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '2') = Left [CmdAmount (n*10+2)]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '3') = Left [CmdAmount (n*10+3)]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '4') = Left [CmdAmount (n*10+4)]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '5') = Left [CmdAmount (n*10+5)]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '6') = Left [CmdAmount (n*10+6)]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '7') = Left [CmdAmount (n*10+7)]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '8') = Left [CmdAmount (n*10+8)]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '9') = Left [CmdAmount (n*10+9)]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '0') = Left [CmdAmount (n*10)]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'j') = ([], [matchAction [CmdAmount n, CmdDown]])
-parseInput CommandMode [] (Curses.EventCharacter 'j') = ([], [matchAction [CmdDown]])
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'j') = Right [matchAction [CmdAmount n, CmdDown]]
+parseInput CommandMode [] (Curses.EventCharacter 'j') = Right [matchAction [CmdDown]]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'k') = ([], [matchAction [CmdAmount n, CmdUp]])
-parseInput CommandMode [] (Curses.EventCharacter 'k') = ([], [matchAction [CmdUp]])
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'k') = Right [matchAction [CmdAmount n, CmdUp]]
+parseInput CommandMode [] (Curses.EventCharacter 'k') = Right [matchAction [CmdUp]]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'h') = ([], [matchAction [CmdAmount n, CmdLeft]])
-parseInput CommandMode [] (Curses.EventCharacter 'h') = ([], [matchAction [CmdLeft]])
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'h') = Right [matchAction [CmdAmount n, CmdLeft]]
+parseInput CommandMode [] (Curses.EventCharacter 'h') = Right [matchAction [CmdLeft]]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'l') = ([], [matchAction [CmdAmount n, CmdRight]])
-parseInput CommandMode [] (Curses.EventCharacter 'l') = ([], [matchAction [CmdRight]])
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'l') = Right [matchAction [CmdAmount n, CmdRight]]
+parseInput CommandMode [] (Curses.EventCharacter 'l') = Right [matchAction [CmdRight]]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '$') = ([], [matchAction [CmdAmount n, CmdDown], matchAction [CmdEndOfLine]])
-parseInput CommandMode [] (Curses.EventCharacter '$') = ([], [matchAction [CmdEndOfLine]])
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '$') = Right [matchAction [CmdAmount n, CmdDown], matchAction [CmdEndOfLine]]
+parseInput CommandMode [] (Curses.EventCharacter '$') = Right [matchAction [CmdEndOfLine]]
 
-parseInput CommandMode [] (Curses.EventCharacter '^') = ([], [matchAction [CmdFirstNoneWhiteSpace]])
+parseInput CommandMode [] (Curses.EventCharacter '^') = Right [matchAction [CmdFirstNoneWhiteSpace]]
 
-parseInput CommandMode [] (Curses.EventCharacter '0') = ([], [matchAction [CmdBeginningOfLine]])
+parseInput CommandMode [] (Curses.EventCharacter '0') = Right [matchAction [CmdBeginningOfLine]]
 
-parseInput CommandMode [] (Curses.EventCharacter '\EOT') = ([], [matchAction [CmdPageDown]])
-parseInput CommandMode [] (Curses.EventCharacter '\NAK') = ([], [matchAction [CmdPageUp]])
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\EOT') = Right [matchAction [CmdAmount n, CmdPageDown]]
+parseInput CommandMode [] (Curses.EventCharacter '\EOT') = Right [matchAction [CmdPageDown]]
+
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\NAK') = Right [matchAction [CmdAmount n, CmdPageUp]]
+parseInput CommandMode [] (Curses.EventCharacter '\NAK') = Right [matchAction [CmdPageUp]]
 parseInput mode cmds ev = error $ show ev
 
 matchAction :: [Command] -> Action
@@ -83,6 +86,9 @@ matchAction [CmdEndOfLine] = ActEndOfLine
 matchAction [CmdBeginningOfLine] = ActBeginningOfLine
 matchAction [CmdFirstNoneWhiteSpace] = ActFirstNoneWhiteSpace
 
+matchAction [CmdAmount n, CmdPageDown] = ActPageDown n
 matchAction [CmdPageDown] = ActPageDown 1
+
+matchAction [CmdAmount n, CmdPageUp] = ActPageUp n
 matchAction [CmdPageUp] = ActPageUp 1
 matchAction _ = ActIdle

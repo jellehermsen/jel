@@ -55,10 +55,16 @@ changeState state (ActCursorLeft n) = moveCursor state (0, -n)
 changeState state (ActCursorRight n) = moveCursor state (0, n)
 
 -- Page down
-changeState state (ActPageDown n) = moveCursor state (10, 0)
+changeState state (ActPageDown n) = do
+    window <- getActiveWindow state
+    let (windowHeight, _) = Window.size window
+    moveCursor state ((quot windowHeight 2) * n, 0)
 
 -- Page up
-changeState state (ActPageUp n) = moveCursor state (-10, 0)
+changeState state (ActPageUp n) = do
+    window <- getActiveWindow state
+    let (windowHeight, _) = Window.size window
+    moveCursor state ((- quot windowHeight 2) * n, 0)
 
 -- End of line
 changeState state (ActEndOfLine) = do
@@ -72,6 +78,14 @@ changeState state (ActBeginningOfLine) = do
    window <- getActiveWindow state
    let (_, cols) = Window.cursorPos window
    moveCursor state (0, -cols)
+
+-- Move to first non-whitespace on the current line
+changeState state (ActFirstNoneWhiteSpace) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let cursorPos = Window.cursorPos window
+    line <- Buffer.lineForPos buffer cursorPos
+    let whiteSpaceLength = Text.length $ Text.takeWhile (\x -> x == ' ' || x == '\t') line
+    moveCursor state (0, -((snd cursorPos) - whiteSpaceLength))
 
 changeState state ActIdle = Nothing
 changeState state _ = Just (state, [EvQuit])
