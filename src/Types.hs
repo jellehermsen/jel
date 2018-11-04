@@ -44,6 +44,7 @@ data Command = CmdRight
     | CmdQuit
     | CmdEndOfLine
     | CmdBeginningOfLine
+    | CmdFirstNoneWhiteSpace
 
 -- All the possible actions in the editor
 data Action = ActIdle
@@ -57,6 +58,7 @@ data Action = ActIdle
     | ActQuit
     | ActEndOfLine
     | ActBeginningOfLine
+    | ActFirstNoneWhiteSpace
 
     -- Insert mode actions
 

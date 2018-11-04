@@ -29,6 +29,7 @@ import qualified Buffer
 type Windows = Map.Map Window.WindowId Window.Window
 type Buffers = Map.Map Buffer.BufferId Buffer.Buffer
 type Registers = Map.Map Text.Text Text.Text
+type ChangedState = Maybe (State, [Event])
 
 data State = State
     { buffers :: Buffers
@@ -95,47 +96,6 @@ insertBuffer state bufferId buffer = state {
     buffers = Map.insert bufferId buffer (buffers state)
 }
 
-changeState :: State -> Action -> (Maybe State, [Event])
-
--- Move cursor down
-changeState state (ActCursorDown n) = moveCursor state (n, 0)
-
--- Move cursor up
-changeState state (ActCursorUp n) = moveCursor state (-n, 0)
-
--- Move cursor left
-changeState state (ActCursorLeft n) = moveCursor state (0, -n)
-
--- Move cursor right
-changeState state (ActCursorRight n) = moveCursor state (0, n)
-
--- Page down
-changeState state (ActPageDown n) = moveCursor state (10, 0)
-
--- Page up
-changeState state (ActPageUp n) = moveCursor state (-10, 0)
-
--- End of line
-changeState state (ActEndOfLine) = case (getActiveWindowAndBuffer state) of
-    Nothing -> (Nothing, [])
-    Just (window, buffer) -> 
-        let
-            cursorPos = Window.cursorPos window
-            line = Buffer.lineForPos buffer cursorPos
-        in
-            case line of
-                Nothing -> (Nothing, [])
-                (Just text) -> moveCursor state (0, Text.length text - (snd cursorPos))
-
--- Beginning of line
-changeState state (ActBeginningOfLine) = case (getActiveWindow state) of
-    Nothing -> (Nothing, [])
-    Just window -> 
-        moveCursor state (0, -(snd (Window.cursorPos window)))
-
-changeState state ActIdle = (Nothing, [EvIdle])
-changeState state _ = (Just state, [EvQuit])
-
 -- Set the scroll position in a window
 setScrollPos :: Window.Window -> Window.Window
 setScrollPos w = if inWindow 
@@ -148,21 +108,3 @@ setScrollPos w = if inWindow
         inWindow = posInRange (Window.cursorPos w) viewPort
         diff = posDiff (Window.cursorPos w) viewPort
         newScrollPos = addV2 (Window.scrollPos w) diff
-
-
--- Take scrolling into account
-moveCursor :: State -> Position -> (Maybe State, [Event])
-moveCursor state (0, 0) = (Just state, [])
-moveCursor state dPos = case (getActiveWindowAndBuffer state) of
-    Nothing -> (Nothing, [])
-    Just (window, buffer) -> 
-        let 
-            (row, col) = Buffer.closestPos buffer (addPos dPos (Window.cursorPos window))
-            newWindow = window { Window.cursorPos = (row, col)} 
-        in
-            if (Window.cursorPos window) /= (row, col) then
-                (Just state {
-                    windows = Map.insert (Window.windowId window) (setScrollPos newWindow) (State.windows state)}
-                , [EvCursorTo row col]) 
-            else
-                (Nothing, [])
