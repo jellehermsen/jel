@@ -1,10 +1,11 @@
 Jel
 ===
 
-Jel is Jelle Hermsen's editor. It's a VI-like editor, borrowing some features
+Jel is Jelle's editor. It's a VI-like editor, borrowing some features
 from Vim, and removing stuff that the author doesn't need.
 
-NB: This is still work in progress and not useable at the moment.
+NB: This is mostly exploratory programming at the moment and definitely not
+useable.
 
 Requirements
 ------------
