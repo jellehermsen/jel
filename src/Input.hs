@@ -17,6 +17,7 @@
 
 module Input where
 
+import Data.Char (isPrint)
 import qualified UI.NCurses as Curses
 import Types
 
@@ -67,7 +68,22 @@ parseInput CommandMode [] (Curses.EventCharacter '\EOT') = Right [matchAction [C
 
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\NAK') = Right [matchAction [CmdAmount n, CmdPageUp]]
 parseInput CommandMode [] (Curses.EventCharacter '\NAK') = Right [matchAction [CmdPageUp]]
+
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'i') = Right [matchAction [CmdInsertMode]]
+parseInput CommandMode [] (Curses.EventCharacter 'i') = Right [matchAction [CmdInsertMode]]
+parseInput CommandMode _ (Curses.EventCharacter '\ESC') = Left []
+parseInput InsertMode [] (Curses.EventCharacter '\ESC') = Right [matchAction [CmdCommandMode]]
+
+parseInput InsertMode [] (Curses.EventCharacter '\n') = Right [matchAction [CmdInsertNewLine]]
+
+parseInput InsertMode [] (Curses.EventCharacter c) = if isPrint c
+    then
+        Right [matchAction [CmdInsertChar c]]
+    else
+        Left []
+
 parseInput mode cmds ev = error $ show ev
+-- parseInput _ _ _ = Left []
 
 matchAction :: [Command] -> Action
 matchAction [CmdQuit] = ActQuit
@@ -91,4 +107,8 @@ matchAction [CmdPageDown] = ActPageDown 1
 
 matchAction [CmdAmount n, CmdPageUp] = ActPageUp n
 matchAction [CmdPageUp] = ActPageUp 1
+matchAction [CmdInsertMode] = ActInsertMode
+matchAction [CmdCommandMode] = ActCommandMode
+matchAction [CmdInsertChar c] = ActInsertChar c
+matchAction [CmdInsertNewLine] = ActInsertNewLine
 matchAction _ = ActIdle

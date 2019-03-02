@@ -45,22 +45,27 @@ data Command = CmdRight
     | CmdEndOfLine
     | CmdBeginningOfLine
     | CmdFirstNoneWhiteSpace
+    | CmdInsertMode
+    | CmdCommandMode
+    | CmdInsertChar Char
+    | CmdInsertNewLine
 
 -- All the possible actions in the editor
 data Action = ActIdle
-    -- Command mode actions
     | ActCursorLeft Int
     | ActCursorRight Int
     | ActCursorUp Int
     | ActCursorDown Int
     | ActPageUp Int
     | ActPageDown Int
+    | ActInsertChar Char
+    | ActInsertNewLine
     | ActQuit
     | ActEndOfLine
     | ActBeginningOfLine
     | ActFirstNoneWhiteSpace
-
-    -- Insert mode actions
+    | ActInsertMode
+    | ActCommandMode
 
 -- All the GUI actions
 data Event = EvIdle
@@ -68,3 +73,6 @@ data Event = EvIdle
     | EvOpenFile
     | EvSaveFile
     | EvQuit
+    | EvInsertMode
+    | EvCommandMode
+    | EvInsertChar Char

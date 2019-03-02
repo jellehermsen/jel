@@ -69,6 +69,6 @@ renderAll state = do
                         let lines = fmap (prepLine scrollCol width) $ Sequence.drop (fromIntegral scrollRow) (Buffer.bLines b)
                         let count = (fromIntegral $ Sequence.length lines) - 1
                         mapM (\y -> drawTextAt y 0 (Window.size window) (Sequence.index lines (fromIntegral y))) [0..count]
-                -- drawTextAt (height - 10) 0 (width, height) (Text.pack (show (Window.scrollPos window )))
+                drawTextAt (height) 0 (width, height) (Text.pack (show (State.mode state )))
                 resetCursor window
             return ()

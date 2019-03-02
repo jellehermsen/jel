@@ -17,11 +17,19 @@
 
 module Helpers where
 
+import qualified Debug.Trace as Debug
+import qualified Data.Text as Text
+import System.IO.Unsafe as Unsafe
 import Types
-
 
 addPos :: Position -> Position -> Position
 addPos (row1, col1) (row2, col2) = (row1 + row2, col1 + col2)
+
+getRow :: Position -> Int
+getRow = fst
+
+getCol :: Position -> Int
+getCol = snd
 
 posInRange :: Position -> V4 -> Bool
 posInRange (row, col) (fromRow, fromCol, toRow, toCol) = 
@@ -41,3 +49,21 @@ addV2 (a, b) (c, d) = (a+c, b+d)
 
 subV2 :: V2 -> V2 -> V2
 subV2 (a, b) (c, d) = (a-c, b-d)
+
+insertChar :: Int -> Char -> Text.Text -> Text.Text
+insertChar pos c t =
+    let
+        splitted = Text.splitAt pos t
+    in
+       Text.concat [fst splitted, Text.singleton c, snd splitted]
+
+-- Functions for debugging
+
+traceMonad :: (Show a, Monad m) => a -> m a
+traceMonad x = Debug.trace (show x) (return x)
+
+trace :: String -> a -> a
+trace = Debug.trace
+
+traceShow :: Show a => a -> b -> b
+traceShow = Debug.traceShow

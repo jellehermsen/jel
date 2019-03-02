@@ -3,6 +3,9 @@
 *.swp
 *.swo
 
+# Log files
+*.log
+
 # Haskell-specific
 dist
 cabal-dev

@@ -74,9 +74,7 @@ getActiveWindow :: State -> Maybe Window.Window
 getActiveWindow state = Map.lookup (activeWindow state) (windows state)
 
 getActiveCWindow :: State -> Maybe CWindow
-getActiveCWindow state = case (getActiveWindow state) of
-    Nothing  -> Nothing
-    Just window -> Just $ Window.cWindow window
+getActiveCWindow state = fmap (Window.cWindow) $ getActiveWindow state
 
 getBufferById :: State -> Buffer.BufferId -> Maybe Buffer.Buffer
 getBufferById state bufferId = Map.lookup bufferId (buffers state)
@@ -85,15 +83,19 @@ getWindowBuffer :: State -> Window.Window -> Maybe Buffer.Buffer
 getWindowBuffer state window = getBufferById state (Window.buffer window)
 
 getActiveWindowAndBuffer :: State -> Maybe (Window.Window, Buffer.Buffer)
-getActiveWindowAndBuffer state = case getActiveWindow state of
-    Nothing -> Nothing
-    Just window -> case getBufferById state (Window.buffer window) of
-        Nothing -> Nothing
-        Just buffer -> Just (window, buffer)
+getActiveWindowAndBuffer state = do
+    window <- getActiveWindow state
+    buffer <- getBufferById state (Window.buffer window)
+    return (window, buffer)
 
 insertBuffer :: State -> Buffer.BufferId -> Buffer.Buffer -> State
 insertBuffer state bufferId buffer = state {
     buffers = Map.insert bufferId buffer (buffers state)
+}
+
+replaceBuffer :: State -> Buffer.Buffer -> State
+replaceBuffer state buffer = state {
+    buffers = Map.insert (Buffer.bufferId buffer) buffer (buffers state)
 }
 
 -- Set the scroll position in a window

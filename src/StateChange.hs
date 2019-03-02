@@ -17,6 +17,7 @@
 
 module StateChange where
 
+import qualified Debug.Trace as Debug
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
@@ -25,6 +26,7 @@ import Helpers
 import State
 import qualified Window
 import qualified Buffer
+
 
 -- Take scrolling into account
 moveCursor :: State -> Position -> ChangedState
@@ -86,6 +88,31 @@ changeState state (ActFirstNoneWhiteSpace) = do
     line <- Buffer.lineForPos buffer cursorPos
     let whiteSpaceLength = Text.length $ Text.takeWhile (\x -> x == ' ' || x == '\t') line
     moveCursor state (0, -((snd cursorPos) - whiteSpaceLength))
+
+-- Switch to insert mode
+changeState state (ActInsertMode) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    if Window.readonly window then
+        Nothing
+    else do
+        let newBuffer = Buffer.flagUndoPoint buffer
+        let newState = replaceBuffer state newBuffer
+        return (newState {mode = InsertMode}, [EvInsertMode])
+
+changeState state (ActCommandMode) = do
+    return (state {mode = CommandMode}, [EvCommandMode])
+
+changeState state (ActInsertChar c) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let cursorPos = Window.cursorPos window
+    newBuffer <- Buffer.insertChar buffer cursorPos c
+    let newState = replaceBuffer state newBuffer
+    Helpers.traceMonad newBuffer
+    movedCursor <- moveCursor newState (0, 1)
+    return (fst movedCursor, (EvInsertChar c):(snd movedCursor))
+
+changeState state (ActInsertNewLine) = do
+    return (state, [])
 
 changeState state ActIdle = Nothing
 changeState state _ = Just (state, [EvQuit])
