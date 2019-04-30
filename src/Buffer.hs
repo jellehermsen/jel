@@ -31,7 +31,9 @@ data PastEvent = UndoFlag
     | InsertText Types.Position Text.Text
     | DeleteText Types.Position Text.Text
     | ReplaceText Types.Position Text.Text Text.Text
-    | InsertNewLine Types.Position
+    | SplitLine Types.Position
+    | JoinLine Int
+    | DeleteLine Int
   deriving (Show, Eq)
 
 data Buffer = Buffer
@@ -91,6 +93,9 @@ insertText buffer pos text = do
 
 insertChar :: Buffer -> Position -> Char -> Maybe Buffer
 insertChar buffer pos c = insertText buffer pos (Text.singleton c)
+
+deleteChar :: Buffer -> Position -> Int -> Maybe Buffer
+deleteChar buffer pos n = Just buffer
 
 flagUndoPoint :: Buffer -> Buffer
 flagUndoPoint buffer = if hasHistory && lastEvent /= UndoFlag

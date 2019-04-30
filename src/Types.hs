@@ -52,22 +52,23 @@ data Command = CmdRight
 
 -- All the possible actions in the editor
 data Action = ActIdle
+    | ActBeginningOfLine
+    | ActCommandMode
+    | ActCursorDown Int
     | ActCursorLeft Int
     | ActCursorRight Int
     | ActCursorUp Int
-    | ActCursorDown Int
-    | ActPageUp Int
-    | ActPageDown Int
-    | ActInsertChar Char
-    | ActInsertNewLine
-    | ActQuit
+    | ActDeleteChar Int
     | ActEndOfLine
-    | ActBeginningOfLine
     | ActFirstNoneWhiteSpace
+    | ActInsertChar Char
     | ActInsertMode
-    | ActCommandMode
+    | ActInsertNewLine
+    | ActPageDown Int
+    | ActPageUp Int
+    | ActQuit
 
--- All the GUI actions
+-- All the events, which resemble disk operations or GUI changes
 data Event = EvIdle
     | EvCursorTo Int Int
     | EvOpenFile
@@ -76,3 +77,4 @@ data Event = EvIdle
     | EvInsertMode
     | EvCommandMode
     | EvInsertChar Char
+    | EvDeleteChar Int

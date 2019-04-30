@@ -69,6 +69,9 @@ parseInput CommandMode [] (Curses.EventCharacter '\EOT') = Right [matchAction [C
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\NAK') = Right [matchAction [CmdAmount n, CmdPageUp]]
 parseInput CommandMode [] (Curses.EventCharacter '\NAK') = Right [matchAction [CmdPageUp]]
 
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'x') = Right [matchAction [CmdAmount n, CmdDeleteChar]]
+parseInput CommandMode [] (Curses.EventCharacter 'x') = Right [matchAction [CmdDeleteChar]]
+
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'i') = Right [matchAction [CmdInsertMode]]
 parseInput CommandMode [] (Curses.EventCharacter 'i') = Right [matchAction [CmdInsertMode]]
 parseInput CommandMode _ (Curses.EventCharacter '\ESC') = Left []
@@ -110,5 +113,6 @@ matchAction [CmdPageUp] = ActPageUp 1
 matchAction [CmdInsertMode] = ActInsertMode
 matchAction [CmdCommandMode] = ActCommandMode
 matchAction [CmdInsertChar c] = ActInsertChar c
+matchAction [CmdAmount n, CmdDeleteChar] = ActDeleteChar n
 matchAction [CmdInsertNewLine] = ActInsertNewLine
 matchAction _ = ActIdle

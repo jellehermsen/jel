@@ -107,12 +107,20 @@ changeState state (ActInsertChar c) = do
     let cursorPos = Window.cursorPos window
     newBuffer <- Buffer.insertChar buffer cursorPos c
     let newState = replaceBuffer state newBuffer
-    Helpers.traceMonad newBuffer
     movedCursor <- moveCursor newState (0, 1)
     return (fst movedCursor, (EvInsertChar c):(snd movedCursor))
 
 changeState state (ActInsertNewLine) = do
     return (state, [])
+
+changeState state (ActDeleteChar n) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let cursorPos = Window.cursorPos window
+    newBuffer <- Buffer.deleteChar buffer cursorPos n
+    let newState = replaceBuffer state newBuffer
+    Helpers.traceMonad newBuffer
+    movedCursor <- moveCursor newState (0, 1)
+    return (fst movedCursor, (EvDeleteChar n):(snd movedCursor))
 
 changeState state ActIdle = Nothing
 changeState state _ = Just (state, [EvQuit])

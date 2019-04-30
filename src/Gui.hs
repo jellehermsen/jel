@@ -63,7 +63,7 @@ renderAll state = do
             let scrollCol  = snd $ Window.scrollPos window
             let scrollRow  = fst $ Window.scrollPos window
             Curses.updateWindow cw $ do
-                Curses.clear
+                -- Curses.clear
                 case buffer of
                     Just b -> do
                         let lines = fmap (prepLine scrollCol width) $ Sequence.drop (fromIntegral scrollRow) (Buffer.bLines b)
