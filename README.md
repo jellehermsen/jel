@@ -15,14 +15,14 @@ systems should probably work too.
 You will need to install the Haskell Platform on your machine. Find out more at
 [https://www.haskell.org/platform/](https://www.haskell.org/platform/).
 
-You will need to dev package of ncursesw5 and you will need C2HS. You can
+You will need the dev package of ncursesw5 and you will need C2HS. You can
 install these on Debian-like systems with:
 
 ```
 sudo apt install c2hs libncursesw5-dev
 ```
 
-If you C2HS isn't available in your package repository you can also install it
+If C2HS isn't available in your package repository you can also install it
 using cabal:
 
 ```
@@ -52,13 +52,13 @@ stateful data.
 
 The basic dataflow of *Jel* is relatively simple. **Main.hs** has a *loop*
 function that waits until it gets an event from NCurses. When it does,
-it tries to parse the given input and transform that into list of (partial)
+it tries to parse the given input and transform that into a list of (partial)
 commands and a list of actions. When it has succesfully mapped an input to an
 action, the state record is altered and using the resulting events the screen
 is updated.
 
 Parsing the input is done through the *parseInput* function which you can find
-in **Input.hs**. Its type is:
+in **Input.hs**.
 
 The *parseInput* function maps the current mode we are in (command mode, or
 visual mode..etc), the previous list of buffered commands and the curses event
