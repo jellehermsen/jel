@@ -41,6 +41,18 @@ cabal install --only-dependencies
 cabal build
 ```
 
+Running
+-------
+You can run this project using:
+
+```
+cabal run 2> output.log
+```
+
+Usually you would just issue a "cabal run" and you're done. However at this
+point I'm logging certain debug messages to stderr, so when you run this you
+write those messages to output.log.
+
 Design notes
 ------------
 Here are my notes on the preliminary design.
