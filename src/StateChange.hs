@@ -28,19 +28,33 @@ import qualified Window
 import qualified Buffer
 
 
--- Take scrolling into account
 moveCursor :: State -> Position -> ChangedState
 moveCursor state (0, 0) = Just (state, [])
 moveCursor state dPos = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let (row, col) = Buffer.closestPos buffer (addPos dPos (Window.cursorPos window))
-    let newWindow = window { Window.cursorPos = (row, col)} 
-    if (Window.cursorPos window) /= (row, col) then
-            Just (state {
-                windows = Map.insert (Window.windowId window) (setScrollPos newWindow) (State.windows state)}
-            , [EvCursorTo row col]) 
+    let newWindow = window { Window.cursorPos = (row, col)}
+    if (Window.cursorPos window) /= (row, col) then do
+            let newState = state {
+                windows = Map.insert
+                    (Window.windowId window)
+                    (setScrollPos newWindow)
+                    (State.windows state)
+            }
+            Just (newState, [])
         else
             Nothing
+
+-- Advances the cursor by one character, possibly putting it in a position
+-- beyond what the current line length should allow. This is necessary, otherwise
+-- you couldn't append to a line, or start typing on a previously empty line.
+advanceCursor :: State -> ChangedState
+advanceCursor state = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let (row, col) = Window.cursorPos window
+    let newWindow = window {Window.cursorPos = (row, col + 1)}
+    let newState = state {windows = Map.insert (Window.windowId window) (setScrollPos newWindow) (State.windows state)}
+    Just (newState, [])
 
 changeState :: State -> Action -> ChangedState
 
@@ -97,30 +111,58 @@ changeState state (ActInsertMode) = do
     else do
         let newBuffer = Buffer.flagUndoPoint buffer
         let newState = replaceBuffer state newBuffer
-        return (newState {mode = InsertMode}, [EvInsertMode])
+        return (newState {mode = InsertMode}, [])
 
+-- Switch to command mode
+-- Also reset the cursor position to an actual valid position. Insert mode
+-- could have left the cursor in a position > the current line length.
 changeState state (ActCommandMode) = do
-    return (state {mode = CommandMode}, [EvCommandMode])
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let (row, col) = Buffer.closestPos buffer $ Window.cursorPos window
+    let newWindow = window { Window.cursorPos = (row, col)}
+    let newState = state {
+        windows = Map.insert
+            (Window.windowId window)
+            (setScrollPos newWindow)
+            (State.windows state)
+    }
+    return (newState {mode = CommandMode}, [])
 
+-- Insert a character
 changeState state (ActInsertChar c) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
     newBuffer <- Buffer.insertChar buffer cursorPos c
     let newState = replaceBuffer state newBuffer
-    movedCursor <- moveCursor newState (0, 1)
-    return (fst movedCursor, (EvInsertChar c):(snd movedCursor))
+    -- movedCursor fails, apparently
+    movedCursor <- advanceCursor newState
+    return (fst movedCursor, [])
 
+-- Insert a newline
 changeState state (ActInsertNewLine) = do
-    return (state, [])
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let cursorPos = Window.cursorPos window
+    (newBuffer, indentation) <- Buffer.splitLine buffer cursorPos
+    let newState = replaceBuffer state newBuffer
+    -- TODO, use splitLine
+    -- TODO add auto indentation
+    movedCursor <- moveCursor newState (1, 0)
+    return movedCursor
 
+-- Delete characters
 changeState state (ActDeleteChar n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
-    newBuffer <- Buffer.deleteChar buffer cursorPos n
-    let newState = replaceBuffer state newBuffer
-    Helpers.traceMonad newBuffer
-    movedCursor <- moveCursor newState (0, 1)
-    return (fst movedCursor, (EvDeleteChar n):(snd movedCursor))
+    newBuffer <- Buffer.deleteText buffer cursorPos n
+    let (row, col) = Buffer.closestPos newBuffer $ Window.cursorPos window
+    let newWindow = window { Window.cursorPos = (row, col)}
+    let newState = (replaceBuffer state newBuffer) {
+        windows = Map.insert
+            (Window.windowId window)
+            (setScrollPos newWindow)
+            (State.windows state)
+    }
+    return (newState, [])
 
 changeState state ActIdle = Nothing
 changeState state _ = Just (state, [EvQuit])

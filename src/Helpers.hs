@@ -58,7 +58,6 @@ insertChar pos c t =
        Text.concat [fst splitted, Text.singleton c, snd splitted]
 
 -- Functions for debugging
-
 traceMonad :: (Show a, Monad m) => a -> m a
 traceMonad x = Debug.trace (show x) (return x)
 
@@ -67,3 +66,11 @@ trace = Debug.trace
 
 traceShow :: Show a => a -> b -> b
 traceShow = Debug.traceShow
+
+-- Split text in 3 parts given the length of the first part, and the length of
+-- the second
+split3 :: Int -> Int -> Text.Text -> (Text.Text, Text.Text, Text.Text)
+split3 len1 len2 t = (first, removed, second)
+    where
+        (first, tail) = Text.splitAt len1 t
+        (removed, second) = Text.splitAt len2 tail

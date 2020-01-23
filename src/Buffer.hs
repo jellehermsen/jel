@@ -26,14 +26,15 @@ import Types
 
 type Marks = Map.Map Text.Text Types.Position
 type BufferId = Id
+type Indentation = Int
 
-data PastEvent = UndoFlag 
+data PastEvent = UndoFlag
     | InsertText Types.Position Text.Text
     | DeleteText Types.Position Text.Text
     | ReplaceText Types.Position Text.Text Text.Text
     | SplitLine Types.Position
-    | JoinLine Int
-    | DeleteLine Int
+    | JoinLine Int Text.Text
+    | DeleteLine Int Text.Text
   deriving (Show, Eq)
 
 data Buffer = Buffer
@@ -66,20 +67,24 @@ closestPos buffer (row, col) = (closestRow, closestCol)
         closestRow = if row < 0
             then
                 0
-            else 
+            else
                 if row >= lengthRow then
                     lengthRow - 1
                 else
                     row
         line = Sequence.index (bLines buffer) $ fromIntegral closestRow
+        lineLength = fromIntegral (Text.length line)
         closestCol = if col < 0
             then
                 0
             else 
-                if col >= (fromIntegral (Text.length line)) then
-                    (fromIntegral $ Text.length line) - 1
+                if lineLength == 0 then
+                    0
                 else
-                    col 
+                    if col >= lineLength then
+                        lineLength - 1
+                    else
+                        col
 
 insertText :: Buffer -> Position -> Text.Text -> Maybe Buffer
 insertText buffer pos text = do
@@ -94,8 +99,25 @@ insertText buffer pos text = do
 insertChar :: Buffer -> Position -> Char -> Maybe Buffer
 insertChar buffer pos c = insertText buffer pos (Text.singleton c)
 
-deleteChar :: Buffer -> Position -> Int -> Maybe Buffer
-deleteChar buffer pos n = Just buffer
+splitLine :: Buffer -> Position -> Maybe (Buffer, Indentation)
+splitLine buffer pos = do
+    -- TODO
+    Just (buffer, 0)
+
+deleteText :: Buffer -> Position -> Int -> Maybe Buffer
+deleteText buffer pos n = do
+    line <- Buffer.lineForPos buffer pos
+    if Text.length line == 0 then
+        Nothing
+    else do
+        let (first, removed, second) = split3 (getCol pos) n line
+        Just buffer {
+            bLines = Sequence.update
+                (getRow pos)
+                (Text.concat [first, second])
+                (bLines buffer)
+            , history = compressHistory $ DeleteText pos removed : history buffer
+        }
 
 flagUndoPoint :: Buffer -> Buffer
 flagUndoPoint buffer = if hasHistory && lastEvent /= UndoFlag
@@ -111,9 +133,20 @@ flagUndoPoint buffer = if hasHistory && lastEvent /= UndoFlag
 compressHistory :: [PastEvent] -> [PastEvent]
 compressHistory [] = []
 compressHistory (x:[]) = [x]
+
 compressHistory (InsertText pos1 text1:InsertText pos2 text2:xs) =
     if subV2 pos1 pos2 == (0, Text.length text2) then
         InsertText pos2 (text2 `mappend` text1):xs
     else
         InsertText pos1 text1:InsertText pos2 text2 : xs
+
+compressHistory (DeleteText pos1 text1:DeleteText pos2 text2:xs) =
+    if pos1 == pos2 then
+        DeleteText pos1 (text1 `mappend` text2) : xs
+    else
+        if subV2 pos1 pos2 == (0, -1) then
+            DeleteText pos2 (text1 `mappend` text2) : xs
+        else
+            DeleteText pos1 text1 : DeleteText pos2 text2 : xs
+
 compressHistory xs = xs

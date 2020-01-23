@@ -44,6 +44,7 @@ parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '8') = Left [CmdAmou
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '9') = Left [CmdAmount (n*10+9)]
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '0') = Left [CmdAmount (n*10)]
 
+-- Movement
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'j') = Right [matchAction [CmdAmount n, CmdDown]]
 parseInput CommandMode [] (Curses.EventCharacter 'j') = Right [matchAction [CmdDown]]
 
@@ -85,8 +86,8 @@ parseInput InsertMode [] (Curses.EventCharacter c) = if isPrint c
     else
         Left []
 
-parseInput mode cmds ev = error $ show ev
--- parseInput _ _ _ = Left []
+parseInput mode cmds (Curses.EventCharacter '\DC1') = Right [ActQuit]
+parseInput _ _ _ = Left []
 
 matchAction :: [Command] -> Action
 matchAction [CmdQuit] = ActQuit
@@ -114,5 +115,6 @@ matchAction [CmdInsertMode] = ActInsertMode
 matchAction [CmdCommandMode] = ActCommandMode
 matchAction [CmdInsertChar c] = ActInsertChar c
 matchAction [CmdAmount n, CmdDeleteChar] = ActDeleteChar n
+matchAction [CmdDeleteChar] = ActDeleteChar 1
 matchAction [CmdInsertNewLine] = ActInsertNewLine
 matchAction _ = ActIdle

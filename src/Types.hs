@@ -70,11 +70,6 @@ data Action = ActIdle
 
 -- All the events, which resemble disk operations or GUI changes
 data Event = EvIdle
-    | EvCursorTo Int Int
     | EvOpenFile
     | EvSaveFile
     | EvQuit
-    | EvInsertMode
-    | EvCommandMode
-    | EvInsertChar Char
-    | EvDeleteChar Int

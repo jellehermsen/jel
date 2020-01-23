@@ -26,9 +26,5 @@ import qualified Window
 
 handleEvent :: State.State -> Event -> Curses.Curses (State.State)
 
--- Move cursor down
-handleEvent state (EvCursorTo y x) = do
-    return state
-
-handleEvent state EvQuit = error "TEST"
+handleEvent state EvQuit = error "Quit"
 handleEvent state _ = return state
