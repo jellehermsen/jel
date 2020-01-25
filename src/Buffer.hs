@@ -88,7 +88,7 @@ closestPos buffer (row, col) = (closestRow, closestCol)
 
 insertText :: Buffer -> Position -> Text.Text -> Maybe Buffer
 insertText buffer pos text = do
-    line <- Buffer.lineForPos buffer pos
+    line <- lineForPos buffer pos
     let splitted = Text.splitAt (getCol pos) line
     let newLine = Text.concat [fst splitted, text, snd splitted]
     Just buffer {
@@ -99,14 +99,24 @@ insertText buffer pos text = do
 insertChar :: Buffer -> Position -> Char -> Maybe Buffer
 insertChar buffer pos c = insertText buffer pos (Text.singleton c)
 
-splitLine :: Buffer -> Position -> Maybe (Buffer, Indentation)
+splitLine :: Buffer -> Position -> Maybe Buffer
 splitLine buffer pos = do
-    -- TODO
-    Just (buffer, 0)
+    let row = getRow pos
+    line <- lineForPos buffer pos
+    let splitted = Text.splitAt (getCol pos) line
+    let newLine = fst splitted
+
+    let newLines = Sequence.insertAt (row + 1) (snd splitted)
+                   $ Sequence.update row (fst splitted) (bLines buffer)
+
+    Just buffer {
+        bLines = newLines,
+        history = SplitLine pos : history buffer
+    }
 
 deleteText :: Buffer -> Position -> Int -> Maybe Buffer
 deleteText buffer pos n = do
-    line <- Buffer.lineForPos buffer pos
+    line <- lineForPos buffer pos
     if Text.length line == 0 then
         Nothing
     else do

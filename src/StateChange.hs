@@ -134,7 +134,6 @@ changeState state (ActInsertChar c) = do
     let cursorPos = Window.cursorPos window
     newBuffer <- Buffer.insertChar buffer cursorPos c
     let newState = replaceBuffer state newBuffer
-    -- movedCursor fails, apparently
     movedCursor <- advanceCursor newState
     return (fst movedCursor, [])
 
@@ -142,12 +141,8 @@ changeState state (ActInsertChar c) = do
 changeState state (ActInsertNewLine) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
-    (newBuffer, indentation) <- Buffer.splitLine buffer cursorPos
-    let newState = replaceBuffer state newBuffer
-    -- TODO, use splitLine
-    -- TODO add auto indentation
-    movedCursor <- moveCursor newState (1, 0)
-    return movedCursor
+    newBuffer <- Buffer.splitLine buffer cursorPos
+    return (replaceBuffer state newBuffer, [])
 
 -- Delete characters
 changeState state (ActDeleteChar n) = do

@@ -49,6 +49,7 @@ data Command = CmdRight
     | CmdCommandMode
     | CmdInsertChar Char
     | CmdInsertNewLine
+    | CmdOpenLine
 
 -- All the possible actions in the editor
 data Action = ActIdle
