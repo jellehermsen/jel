@@ -49,6 +49,9 @@ data Command = CmdRight
     | CmdCommandMode
     | CmdInsertChar Char
     | CmdInsertNewLine
+    | CmdOpenLine
+    | CmdUndo
+    | CmdRedo
 
 -- All the possible actions in the editor
 data Action = ActIdle
@@ -67,6 +70,8 @@ data Action = ActIdle
     | ActPageDown Int
     | ActPageUp Int
     | ActQuit
+    | ActUndo Int
+    | ActRedo Int
 
 -- All the events, which resemble disk operations or GUI changes
 data Event = EvIdle

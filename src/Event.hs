@@ -19,6 +19,8 @@ module Event where
 
 import qualified UI.NCurses as Curses
 
+import Control.Monad.IO.Class (liftIO)
+import System.Exit (exitSuccess)
 import Types
 import qualified Gui
 import qualified State
@@ -26,5 +28,5 @@ import qualified Window
 
 handleEvent :: State.State -> Event -> Curses.Curses (State.State)
 
-handleEvent state EvQuit = error "Quit"
+handleEvent state EvQuit = liftIO exitSuccess
 handleEvent state _ = return state

@@ -45,76 +45,107 @@ parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '9') = Left [CmdAmou
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '0') = Left [CmdAmount (n*10)]
 
 -- Movement
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'j') = Right [matchAction [CmdAmount n, CmdDown]]
-parseInput CommandMode [] (Curses.EventCharacter 'j') = Right [matchAction [CmdDown]]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'j') = Right $ matchActions [CmdAmount n, CmdDown]
+parseInput CommandMode [] (Curses.EventCharacter 'j') = Right $ matchActions [CmdDown]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'k') = Right [matchAction [CmdAmount n, CmdUp]]
-parseInput CommandMode [] (Curses.EventCharacter 'k') = Right [matchAction [CmdUp]]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'k') = Right $ matchActions [CmdAmount n, CmdUp]
+parseInput CommandMode [] (Curses.EventCharacter 'k') = Right $ matchActions [CmdUp]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'h') = Right [matchAction [CmdAmount n, CmdLeft]]
-parseInput CommandMode [] (Curses.EventCharacter 'h') = Right [matchAction [CmdLeft]]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'h') = Right $ matchActions [CmdAmount n, CmdLeft]
+parseInput CommandMode [] (Curses.EventCharacter 'h') = Right $ matchActions [CmdLeft]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'l') = Right [matchAction [CmdAmount n, CmdRight]]
-parseInput CommandMode [] (Curses.EventCharacter 'l') = Right [matchAction [CmdRight]]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'l') = Right $ matchActions [CmdAmount n, CmdRight]
+parseInput CommandMode [] (Curses.EventCharacter 'l') = Right $ matchActions [CmdRight]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '$') = Right [matchAction [CmdAmount n, CmdDown], matchAction [CmdEndOfLine]]
-parseInput CommandMode [] (Curses.EventCharacter '$') = Right [matchAction [CmdEndOfLine]]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '$') = Right $ matchActions [CmdAmount n, CmdEndOfLine]
+parseInput CommandMode [] (Curses.EventCharacter '$') = Right $ matchActions [CmdEndOfLine]
 
-parseInput CommandMode [] (Curses.EventCharacter '^') = Right [matchAction [CmdFirstNoneWhiteSpace]]
+parseInput CommandMode [] (Curses.EventCharacter '^') = Right $ matchActions [CmdFirstNoneWhiteSpace]
 
-parseInput CommandMode [] (Curses.EventCharacter '0') = Right [matchAction [CmdBeginningOfLine]]
+parseInput CommandMode [] (Curses.EventCharacter '0') = Right $ matchActions [CmdBeginningOfLine]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\EOT') = Right [matchAction [CmdAmount n, CmdPageDown]]
-parseInput CommandMode [] (Curses.EventCharacter '\EOT') = Right [matchAction [CmdPageDown]]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\EOT') = Right $ matchActions [CmdAmount n, CmdPageDown]
+parseInput CommandMode [] (Curses.EventCharacter '\EOT') = Right $ matchActions [CmdPageDown]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\NAK') = Right [matchAction [CmdAmount n, CmdPageUp]]
-parseInput CommandMode [] (Curses.EventCharacter '\NAK') = Right [matchAction [CmdPageUp]]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\NAK') = Right $ matchActions [CmdAmount n, CmdPageUp]
+parseInput CommandMode [] (Curses.EventCharacter '\NAK') = Right $ matchActions [CmdPageUp]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'x') = Right [matchAction [CmdAmount n, CmdDeleteChar]]
-parseInput CommandMode [] (Curses.EventCharacter 'x') = Right [matchAction [CmdDeleteChar]]
+-- Delete character(s)
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'x') = Right $ matchActions [CmdAmount n, CmdDeleteChar]
+parseInput CommandMode [] (Curses.EventCharacter 'x') = Right $ matchActions [CmdDeleteChar]
 
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'i') = Right [matchAction [CmdInsertMode]]
-parseInput CommandMode [] (Curses.EventCharacter 'i') = Right [matchAction [CmdInsertMode]]
+-- Open new line
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'o') = Right $ matchActions [CmdAmount n, CmdOpenLine]
+parseInput CommandMode [] (Curses.EventCharacter 'o') = Right $ matchActions [CmdOpenLine]
+
+-- Switch to insert mode
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'i') = Right $ matchActions [CmdInsertMode]
+parseInput CommandMode [] (Curses.EventCharacter 'i') = Right $ matchActions [CmdInsertMode]
+
+-- Switch back to command mode
 parseInput CommandMode _ (Curses.EventCharacter '\ESC') = Left []
-parseInput InsertMode [] (Curses.EventCharacter '\ESC') = Right [matchAction [CmdCommandMode]]
+parseInput InsertMode [] (Curses.EventCharacter '\ESC') = Right $ matchActions [CmdCommandMode]
 
-parseInput InsertMode [] (Curses.EventCharacter '\n') = Right [matchAction [CmdInsertNewLine]]
+-- Insert newline
+parseInput InsertMode [] (Curses.EventCharacter '\n') = Right $ matchActions [CmdInsertNewLine]
 
+-- Insert character
 parseInput InsertMode [] (Curses.EventCharacter c) = if isPrint c
     then
-        Right [matchAction [CmdInsertChar c]]
+        Right $ matchActions [CmdInsertChar c]
     else
         Left []
 
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'u') = Right $ matchActions [CmdAmount n, CmdUndo]
+parseInput CommandMode [] (Curses.EventCharacter 'u') = Right $ matchActions [CmdUndo]
+
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\DC2') = Right $ matchActions [CmdAmount n, CmdRedo]
+parseInput CommandMode [] (Curses.EventCharacter '\DC2') = Right $ matchActions [CmdRedo]
+
+-- Quit on ctrl-q
 parseInput mode cmds (Curses.EventCharacter '\DC1') = Right [ActQuit]
+
 parseInput _ _ _ = Left []
 
-matchAction :: [Command] -> Action
-matchAction [CmdQuit] = ActQuit
-matchAction [CmdAmount n, CmdDown] = ActCursorDown n
-matchAction [CmdDown] = ActCursorDown 1
+-- Map a list of commands to a list of actions
+matchActions :: [Command] -> [Action]
+matchActions [CmdQuit] = [ActQuit]
+matchActions [CmdAmount n, CmdDown] = [ActCursorDown n]
+matchActions [CmdDown] = [ActCursorDown 1]
 
-matchAction [CmdAmount n, CmdUp] = ActCursorUp n
-matchAction [CmdUp] = ActCursorUp 1
+matchActions [CmdAmount n, CmdUp] = [ActCursorUp n]
+matchActions [CmdUp] = [ActCursorUp 1]
 
-matchAction [CmdAmount n, CmdLeft] = ActCursorLeft n
-matchAction [CmdLeft] = ActCursorLeft 1
+matchActions [CmdAmount n, CmdLeft] = [ActCursorLeft n]
+matchActions [CmdLeft] = [ActCursorLeft 1]
 
-matchAction [CmdAmount n, CmdRight] = ActCursorRight n
-matchAction [CmdRight] = ActCursorRight 1
-matchAction [CmdEndOfLine] = ActEndOfLine
-matchAction [CmdBeginningOfLine] = ActBeginningOfLine
-matchAction [CmdFirstNoneWhiteSpace] = ActFirstNoneWhiteSpace
+matchActions [CmdAmount n, CmdRight] = [ActCursorRight n]
+matchActions [CmdRight] = [ActCursorRight 1]
 
-matchAction [CmdAmount n, CmdPageDown] = ActPageDown n
-matchAction [CmdPageDown] = ActPageDown 1
+matchActions [CmdAmount n, CmdEndOfLine] = [ActCursorDown (n - 1), ActEndOfLine]
+matchActions [CmdEndOfLine] = [ActEndOfLine]
 
-matchAction [CmdAmount n, CmdPageUp] = ActPageUp n
-matchAction [CmdPageUp] = ActPageUp 1
-matchAction [CmdInsertMode] = ActInsertMode
-matchAction [CmdCommandMode] = ActCommandMode
-matchAction [CmdInsertChar c] = ActInsertChar c
-matchAction [CmdAmount n, CmdDeleteChar] = ActDeleteChar n
-matchAction [CmdDeleteChar] = ActDeleteChar 1
-matchAction [CmdInsertNewLine] = ActInsertNewLine
-matchAction _ = ActIdle
+matchActions [CmdBeginningOfLine] = [ActBeginningOfLine]
+matchActions [CmdFirstNoneWhiteSpace] = [ActFirstNoneWhiteSpace]
+
+matchActions [CmdAmount n, CmdPageDown] = [ActPageDown n]
+matchActions [CmdPageDown] = [ActPageDown 1]
+
+matchActions [CmdAmount n, CmdPageUp] = [ActPageUp n]
+matchActions [CmdPageUp] = [ActPageUp 1]
+matchActions [CmdInsertMode] = [ActInsertMode]
+matchActions [CmdCommandMode] = [ActCommandMode]
+matchActions [CmdInsertChar c] = [ActInsertChar c]
+matchActions [CmdAmount n, CmdDeleteChar] = [ActDeleteChar n]
+matchActions [CmdDeleteChar] = [ActDeleteChar 1]
+matchActions [CmdInsertNewLine] = [ActInsertNewLine, ActCursorDown 1, ActFirstNoneWhiteSpace]
+matchActions [CmdAmount n, CmdOpenLine] = matchActions [CmdOpenLine]
+matchActions [CmdOpenLine] = [ActCursorDown 1, ActBeginningOfLine, ActInsertNewLine, ActInsertMode]
+
+matchActions [CmdAmount n, CmdUndo] = [ActUndo n]
+matchActions [CmdUndo] = [ActUndo 1]
+
+matchActions [CmdAmount n, CmdRedo] = [ActRedo n]
+matchActions [CmdRedo] = [ActRedo 1]
+
+matchActions _ = [ActIdle]
