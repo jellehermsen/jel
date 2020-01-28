@@ -147,5 +147,4 @@ matchActions [CmdUndo] = [ActUndo 1]
 
 matchActions [CmdAmount n, CmdRedo] = [ActRedo n]
 matchActions [CmdRedo] = [ActRedo 1]
-
 matchActions _ = [ActIdle]
