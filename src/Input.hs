@@ -74,13 +74,28 @@ parseInput CommandMode [] (Curses.EventCharacter '\NAK') = Right $ matchActions 
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'x') = Right $ matchActions [CmdAmount n, CmdDeleteChar]
 parseInput CommandMode [] (Curses.EventCharacter 'x') = Right $ matchActions [CmdDeleteChar]
 
+-- Delete sections
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'd') = Left [CmdDelete n]
+parseInput CommandMode [] (Curses.EventCharacter 'd') = Left [CmdDelete 1]
+-- parseInput CommandMode (CmdDelete n):xs (eChar) =
+
 -- Open new line
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'o') = Right $ matchActions [CmdAmount n, CmdOpenLine]
 parseInput CommandMode [] (Curses.EventCharacter 'o') = Right $ matchActions [CmdOpenLine]
 
--- Switch to insert mode
+-- Switch to insert after mode
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'i') = Right $ matchActions [CmdInsertMode]
 parseInput CommandMode [] (Curses.EventCharacter 'i') = Right $ matchActions [CmdInsertMode]
+
+parseInput CommandMode [] (Curses.EventCharacter '\f') = Right $ matchActions [CmdRedrawScreen]
+
+-- Switch to insert before mode
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'I') = Right $ matchActions [CmdInsertModeBefore]
+parseInput CommandMode [] (Curses.EventCharacter 'I') = Right $ matchActions [CmdInsertModeBefore]
+
+-- Append
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'a') = Right $ matchActions [CmdAppend]
+parseInput CommandMode [] (Curses.EventCharacter 'a') = Right $ matchActions [CmdAppend]
 
 -- Switch back to command mode
 parseInput CommandMode _ (Curses.EventCharacter '\ESC') = Left []
@@ -134,6 +149,7 @@ matchActions [CmdPageDown] = [ActPageDown 1]
 matchActions [CmdAmount n, CmdPageUp] = [ActPageUp n]
 matchActions [CmdPageUp] = [ActPageUp 1]
 matchActions [CmdInsertMode] = [ActInsertMode]
+matchActions [CmdInsertModeBefore] = [ActFirstNoneWhiteSpace, ActInsertMode]
 matchActions [CmdCommandMode] = [ActCommandMode]
 matchActions [CmdInsertChar c] = [ActInsertChar c]
 matchActions [CmdAmount n, CmdDeleteChar] = [ActDeleteChar n]
@@ -147,4 +163,7 @@ matchActions [CmdUndo] = [ActUndo 1]
 
 matchActions [CmdAmount n, CmdRedo] = [ActRedo n]
 matchActions [CmdRedo] = [ActRedo 1]
+matchActions [CmdRedrawScreen] = [ActRedrawScreen]
+
+matchActions [CmdAppend] = [ActAdvanceCursor, ActInsertMode]
 matchActions _ = [ActIdle]

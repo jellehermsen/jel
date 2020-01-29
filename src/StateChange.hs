@@ -159,15 +159,40 @@ changeState state (ActDeleteChar n) = do
     }
     return (newState, [])
 
+-- Undo
 changeState state (ActUndo n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
-    newBuffer <- Buffer.undo n buffer
-    return (replaceBuffer state newBuffer, [])
+    let cursorPos = Window.cursorPos window
+    (newBuffer, newPos) <- Buffer.undo n cursorPos buffer
 
+    let newWindow = window {Window.cursorPos = newPos}
+    let newState = (replaceBuffer state newBuffer) {
+        windows = Map.insert
+            (Window.windowId window)
+            (setScrollPos newWindow)
+            (State.windows state)
+    }
+
+    return (replaceBuffer newState newBuffer, [])
+
+-- Redo
 changeState state (ActRedo n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
-    newBuffer <- Buffer.redo (n + 1) buffer
-    return (replaceBuffer state newBuffer, [])
+    let cursorPos = Window.cursorPos window
+    (newBuffer, newPos) <- Buffer.redo (n + 1) cursorPos buffer
+
+    let newWindow = window {Window.cursorPos = newPos}
+    let newState = (replaceBuffer state newBuffer) {
+        windows = Map.insert
+            (Window.windowId window)
+            (setScrollPos newWindow)
+            (State.windows state)
+    }
+
+    return (replaceBuffer newState newBuffer, [])
+
+changeState state ActAdvanceCursor = advanceCursor state
+changeState state ActRedrawScreen = Just (state, [EvRedrawScreen])
 
 changeState state ActIdle = Nothing
 changeState state _ = Just (state, [EvQuit])

@@ -26,7 +26,17 @@ import qualified Gui
 import qualified State
 import qualified Window
 
-handleEvent :: State.State -> Event -> Curses.Curses (State.State)
+import Helpers
 
-handleEvent state EvQuit = liftIO exitSuccess
-handleEvent state _ = return state
+handleEvent :: Curses.Window -> State.State -> Event -> Curses.Curses (State.State)
+
+handleEvent _ state EvQuit = liftIO exitSuccess
+
+handleEvent motherCWindow state EvRedrawScreen = do
+    color <-  Curses.newColorID Curses.ColorMagenta Curses.ColorYellow 100
+    Curses.updateWindow motherCWindow $ do
+        Curses.clear
+        Curses.setColor color
+        return state
+
+handleEvent _ state _ = return state

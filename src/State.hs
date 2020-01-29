@@ -110,3 +110,7 @@ setScrollPos w = if inWindow
         inWindow = posInRange (Window.cursorPos w) viewPort
         diff = posDiff (Window.cursorPos w) viewPort
         newScrollPos = addV2 (Window.scrollPos w) diff
+
+-- Set the cursor position in a window
+-- setCursorPos :: Window.Window -> Position -> Window.Window
+-- setCursorPos

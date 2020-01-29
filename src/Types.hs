@@ -30,6 +30,8 @@ data Mode = CommandMode | InsertMode | LastLineMode | VisualMode |
             VisualLineMode | ReplaceMode
   deriving (Show, Eq)
 
+data PossibleMotion = CouldBeMotion | NoMotion | Motion
+
 data Command = CmdRight 
     | CmdLeft
     | CmdUp
@@ -39,19 +41,22 @@ data Command = CmdRight
     | CmdAmount Int
     | CmdPaste
     | CmdYank
-    | CmdDeleteLine
+    | CmdDelete Int
     | CmdDeleteChar
     | CmdQuit
     | CmdEndOfLine
     | CmdBeginningOfLine
     | CmdFirstNoneWhiteSpace
     | CmdInsertMode
+    | CmdInsertModeBefore
     | CmdCommandMode
     | CmdInsertChar Char
     | CmdInsertNewLine
     | CmdOpenLine
     | CmdUndo
     | CmdRedo
+    | CmdRedrawScreen
+    | CmdAppend
 
 -- All the possible actions in the editor
 data Action = ActIdle
@@ -66,15 +71,18 @@ data Action = ActIdle
     | ActFirstNoneWhiteSpace
     | ActInsertChar Char
     | ActInsertMode
+    | ActAdvanceCursor
     | ActInsertNewLine
     | ActPageDown Int
     | ActPageUp Int
     | ActQuit
     | ActUndo Int
     | ActRedo Int
+    | ActRedrawScreen
 
 -- All the events, which resemble disk operations or GUI changes
 data Event = EvIdle
     | EvOpenFile
     | EvSaveFile
     | EvQuit
+    | EvRedrawScreen

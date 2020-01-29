@@ -93,6 +93,7 @@ insertText buffer pos text = do
     line <- lineForPos buffer pos
     let splitted = Text.splitAt (getCol pos) line
     let newLine = Text.concat [fst splitted, text, snd splitted]
+    traceMonad pos
     Just buffer {
         bLines = Sequence.update (getRow pos) newLine (bLines buffer),
         history = compressHistory $ InsertText pos text : history buffer
@@ -144,54 +145,64 @@ flagUndoPoint buffer = if hasHistory && lastEvent /= UndoFlag
         depth = undoDepth buffer
         lastEvent = head $ history buffer
 
-redo :: Int -> Buffer -> Maybe Buffer
-redo 0 buffer = Just buffer
-redo count buffer = do
+redo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
+redo 0 pos buffer = Just (buffer, pos)
+redo count pos buffer = do
     let his = reverse $ take (undoDepth buffer) (history buffer)
-    newBuffer <- redoStep his (Just buffer)
-    redo (count - 1) newBuffer
+    (newBuffer, newPosition) <- redoStep his $ Just (buffer, pos)
+    redo (count - 1) newPosition newBuffer
 
-redoStep :: [PastEvent] -> Maybe Buffer -> Maybe Buffer
+redoStep :: [PastEvent] -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
 redoStep _ Nothing = Nothing
-redoStep [] buf = buf
+redoStep [] (Just (buf, pos)) = Just (buf, pos)
 
-redoStep (UndoFlag:xs) (Just buffer) = Just $
-    buffer {undoDepth = (undoDepth buffer) - 1}
+redoStep (UndoFlag:xs) (Just (buffer, pos)) = Just
+    ( buffer {undoDepth = (undoDepth buffer) - 1}
+    , pos
+    )
 
-redoStep (InsertText pos text:xs) (Just buffer) = do
+redoStep (InsertText pos text:xs) (Just (buffer, newPos)) = do
     line <- lineForPos buffer pos
     let splitted = Text.splitAt (getCol pos) line
     let newLine = Text.concat [fst splitted, text, snd splitted]
-    Just buffer {
+    let newBuffer = buffer {
         bLines = Sequence.update (getRow pos) newLine (bLines buffer),
         undoDepth = (undoDepth buffer) - 1
     }
+    Just (newBuffer, pos)
 
-undo :: Int -> Buffer -> Maybe Buffer
-undo 0 buffer = Just buffer
-undo count buffer = do
+-- undo is called with the amount of "undos", for example 10 when you do 10u
+-- a cursor position and a buffer and it returns a tuple with the new buffer,
+-- the new cursor position, or Nothing
+undo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
+undo 0 pos buffer = Just (buffer, pos)
+undo count pos buffer = do
     let his = drop (undoDepth buffer) (history buffer)
-    newBuffer <- undoStep his (Just buffer)
-    undo (count - 1) newBuffer
+    (newBuffer, newPos) <- undoStep his $ Just (buffer, pos)
+    undo (count - 1) newPos newBuffer
 
-undoStep :: [PastEvent] -> Maybe Buffer -> Maybe Buffer
+undoStep :: [PastEvent] -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
 undoStep _ Nothing = Nothing
 undoStep [] buf = buf 
 
-undoStep (UndoFlag:xs) (Just buffer) = Just $ 
-    buffer {undoDepth = (undoDepth buffer) + 1}
+undoStep (UndoFlag:xs) (Just (buffer, pos)) = Just
+    ( buffer {undoDepth = (undoDepth buffer) + 1}
+    , pos
+    )
 
-undoStep (InsertText pos text:xs) (Just buffer) = do
+undoStep (InsertText pos text:xs) (Just (buffer, oldPos)) = do
     line <- lineForPos buffer pos
     let (first, removed, second) = split3 (getCol pos) (Text.length text) line
     if removed == text then
-        undoStep xs $ Just buffer {
-            bLines = Sequence.update
-                (getRow pos)
-                (Text.concat [first, second])
-                (bLines buffer)
-            , undoDepth = (undoDepth buffer) + 1
-        }
+        undoStep xs $ Just
+            ( buffer {
+                bLines = Sequence.update
+                    (getRow pos)
+                    (Text.concat [first, second])
+                    (bLines buffer)
+                , undoDepth = (undoDepth buffer) + 1}
+            , pos
+            )
     else
         Nothing
 

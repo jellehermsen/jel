@@ -67,6 +67,7 @@ resetCursor window = Curses.moveCursor (toInteger row) (toInteger col)
 -- something :-)
 renderAll :: State.State -> Curses.Curses ()
 renderAll state = do
+    color <-  Curses.newColorID Curses.ColorMagenta Curses.ColorYellow 100
     case (State.getActiveWindow state) of
         Nothing -> return ()
         Just window -> do
@@ -77,7 +78,6 @@ renderAll state = do
             let scrollCol  = snd $ Window.scrollPos window
             let scrollRow  = fst $ Window.scrollPos window
             Curses.updateWindow cw $ do
-                -- Curses.clear
                 case buffer of
                     Just b -> do
                         let lines = fmap (prepLine scrollCol width) $ Sequence.drop (fromIntegral scrollRow) (Buffer.bLines b)
