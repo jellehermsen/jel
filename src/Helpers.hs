@@ -31,6 +31,18 @@ getRow = fst
 getCol :: Position -> Int
 getCol = snd
 
+smallestPos :: Position -> Position -> Position
+smallestPos (row1, col1) (row2, col2)
+    | row1 < row2                  = (row1, col1)
+    | row1 == row2 && col1 <= col2 = (row1, col1)
+    | otherwise                    = (row2, col2)
+
+largestPos :: Position -> Position -> Position
+largestPos (row1, col1) (row2, col2)
+    | row1 < row2                  = (row2, col2)
+    | row1 == row2 && col1 <= col2 = (row2, col2)
+    | otherwise                    = (row1, col1)
+
 posInRange :: Position -> V4 -> Bool
 posInRange (row, col) (fromRow, fromCol, toRow, toCol) = 
     row >= fromRow && row <= toRow
@@ -74,3 +86,6 @@ split3 len1 len2 t = (first, removed, second)
     where
         (first, tail) = Text.splitAt len1 t
         (removed, second) = Text.splitAt len2 tail
+
+add :: Int -> Int -> Int
+add a b = a + b

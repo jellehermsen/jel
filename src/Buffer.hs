@@ -24,6 +24,10 @@ import qualified Data.Text as Text
 import Helpers
 import Types
 
+-- ===========================
+-- =         Types           =
+-- ===========================
+
 type Marks = Map.Map Text.Text Types.Position
 type BufferId = Id
 type Indentation = Int
@@ -55,6 +59,11 @@ newBuffer bufferId = Buffer
     , marks = Map.empty
     , undoDepth = 0
     }
+
+
+-- ==========================
+-- = Small helper functions =
+-- ==========================
 
 lineCount :: Buffer -> Int
 lineCount buffer =  Sequence.length $ bLines buffer
@@ -88,12 +97,16 @@ closestPos buffer (row, col) = (closestRow, closestCol)
                     else
                         col
 
+
+-- =====================
+-- = Buffer operations =
+-- =====================
+
 insertText :: Buffer -> Position -> Text.Text -> Maybe Buffer
 insertText buffer pos text = do
     line <- lineForPos buffer pos
     let splitted = Text.splitAt (getCol pos) line
     let newLine = Text.concat [fst splitted, text, snd splitted]
-    traceMonad pos
     Just buffer {
         bLines = Sequence.update (getRow pos) newLine (bLines buffer),
         history = compressHistory $ InsertText pos text : history buffer
@@ -117,20 +130,107 @@ splitLine buffer pos = do
         history = SplitLine pos : history buffer
     }
 
-deleteText :: Buffer -> Position -> Int -> Maybe Buffer
+deleteText :: Buffer -> Position -> Int -> Maybe (Buffer, Text.Text)
 deleteText buffer pos n = do
     line <- lineForPos buffer pos
     if Text.length line == 0 then
         Nothing
     else do
         let (first, removed, second) = split3 (getCol pos) n line
-        Just buffer {
-            bLines = Sequence.update
-                (getRow pos)
-                (Text.concat [first, second])
-                (bLines buffer)
-            , history = compressHistory $ DeleteText pos removed : history buffer
-        }
+        Just (buffer {
+                bLines = Sequence.update
+                    (getRow pos)
+                    (Text.concat [first, second])
+                    (bLines buffer)
+                , history = compressHistory $ DeleteText pos removed : history buffer
+            }, removed)
+
+deleteSection :: Buffer -> Position -> Position -> Maybe (Buffer, Text.Text)
+deleteSection buffer pos1 pos2
+    | fromRow == toRow = deleteText buffer fromPos (toCol - fromCol + 1)
+    | toRow == fromRow + 1 =
+        return (buffer, "")
+    | otherwise =
+        return (buffer, "")
+    where
+        fromPos@(fromRow, fromCol) = smallestPos pos1 pos2
+        toPos@(toRow, toCol) = largestPos pos1 pos2
+
+-- ===============
+-- = Undo / Redo =
+-- ===============
+
+replayPastEvents :: [PastEvent] -> (Int -> Int)
+                    -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
+
+replayPastEvents _ _ Nothing = Nothing
+replayPastEvents [] _ (Just (buf, pos)) = Just (buf, pos)
+
+replayPastEvents (UndoFlag:xs) changeDepth (Just (buffer, pos)) = Just
+    ( buffer {undoDepth = changeDepth (undoDepth buffer)}
+    , pos
+    )
+
+replayPastEvents (InsertText pos text:xs) changeDepth (Just (buffer, newPos)) = do
+    line <- lineForPos buffer pos
+    let splitted = Text.splitAt (getCol pos) line
+    let newLine = Text.concat [fst splitted, text, snd splitted]
+    let newBuffer = buffer {
+        bLines = Sequence.update (getRow pos) newLine (bLines buffer),
+        undoDepth = changeDepth (undoDepth buffer)
+    }
+    replayPastEvents xs changeDepth (Just (newBuffer, pos))
+
+
+replayPastEvents (DeleteText pos text:xs) changeDepth (Just (buffer, newPos)) = do
+    line <- lineForPos buffer pos
+    let (first, removed, second) = split3 (getCol pos) (Text.length text) line
+    if removed == text then
+        replayPastEvents xs changeDepth $ Just
+            ( buffer {
+                bLines = Sequence.update
+                    (getRow pos)
+                    (Text.concat [first, second])
+                    (bLines buffer)
+                , undoDepth = changeDepth (undoDepth buffer)}
+            , pos
+            )
+    else
+        Nothing
+
+redo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
+redo 0 pos buffer = Just (buffer, pos)
+redo count pos buffer = do
+    let his = reverse $ take (undoDepth buffer) (history buffer)
+    (newBuffer, newPosition) <- replayPastEvents his (subtract 1) $ Just (buffer, pos)
+    redo (count - 1) newPosition newBuffer
+
+-- undo is called with the amount of "undos", for example 10 when you do 10u
+-- a cursor position and a buffer and it returns a tuple with the new buffer,
+-- the new cursor position, or Nothing
+undo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
+undo 0 pos buffer = Just (buffer, pos)
+undo count pos buffer = do
+    let his = drop (undoDepth buffer) (history buffer)
+    (newBuffer, newPos) <- undoStep his (add 1) $ Just (buffer, pos)
+    undo (count - 1) newPos newBuffer
+
+undoStep :: [PastEvent] -> (Int -> Int) -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
+undoStep _ _ Nothing = Nothing
+undoStep [] _ buf = buf
+
+undoStep (UndoFlag:xs) changeDepth bp =
+    replayPastEvents (UndoFlag:xs) changeDepth bp
+
+undoStep (InsertText pos text:xs) changeDepth bp =
+    replayPastEvents (DeleteText pos text:xs) changeDepth bp
+
+undoStep (DeleteText pos text:xs) changeDepth bp =
+    replayPastEvents (InsertText pos text:xs) changeDepth bp
+
+-- ===========
+-- = History =
+-- ===========
 
 flagUndoPoint :: Buffer -> Buffer
 flagUndoPoint buffer = if hasHistory && lastEvent /= UndoFlag
@@ -144,67 +244,6 @@ flagUndoPoint buffer = if hasHistory && lastEvent /= UndoFlag
         hasHistory = length (history buffer) > 0
         depth = undoDepth buffer
         lastEvent = head $ history buffer
-
-redo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
-redo 0 pos buffer = Just (buffer, pos)
-redo count pos buffer = do
-    let his = reverse $ take (undoDepth buffer) (history buffer)
-    (newBuffer, newPosition) <- redoStep his $ Just (buffer, pos)
-    redo (count - 1) newPosition newBuffer
-
-redoStep :: [PastEvent] -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
-redoStep _ Nothing = Nothing
-redoStep [] (Just (buf, pos)) = Just (buf, pos)
-
-redoStep (UndoFlag:xs) (Just (buffer, pos)) = Just
-    ( buffer {undoDepth = (undoDepth buffer) - 1}
-    , pos
-    )
-
-redoStep (InsertText pos text:xs) (Just (buffer, newPos)) = do
-    line <- lineForPos buffer pos
-    let splitted = Text.splitAt (getCol pos) line
-    let newLine = Text.concat [fst splitted, text, snd splitted]
-    let newBuffer = buffer {
-        bLines = Sequence.update (getRow pos) newLine (bLines buffer),
-        undoDepth = (undoDepth buffer) - 1
-    }
-    Just (newBuffer, pos)
-
--- undo is called with the amount of "undos", for example 10 when you do 10u
--- a cursor position and a buffer and it returns a tuple with the new buffer,
--- the new cursor position, or Nothing
-undo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
-undo 0 pos buffer = Just (buffer, pos)
-undo count pos buffer = do
-    let his = drop (undoDepth buffer) (history buffer)
-    (newBuffer, newPos) <- undoStep his $ Just (buffer, pos)
-    undo (count - 1) newPos newBuffer
-
-undoStep :: [PastEvent] -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
-undoStep _ Nothing = Nothing
-undoStep [] buf = buf 
-
-undoStep (UndoFlag:xs) (Just (buffer, pos)) = Just
-    ( buffer {undoDepth = (undoDepth buffer) + 1}
-    , pos
-    )
-
-undoStep (InsertText pos text:xs) (Just (buffer, oldPos)) = do
-    line <- lineForPos buffer pos
-    let (first, removed, second) = split3 (getCol pos) (Text.length text) line
-    if removed == text then
-        undoStep xs $ Just
-            ( buffer {
-                bLines = Sequence.update
-                    (getRow pos)
-                    (Text.concat [first, second])
-                    (bLines buffer)
-                , undoDepth = (undoDepth buffer) + 1}
-            , pos
-            )
-    else
-        Nothing
 
 -- Tries to merge the last two PastEvents. This helps keep the Buffer history
 -- small.
@@ -220,11 +259,10 @@ compressHistory (InsertText pos1 text1:InsertText pos2 text2:xs) =
 
 compressHistory (DeleteText pos1 text1:DeleteText pos2 text2:xs) =
     if pos1 == pos2 then
-        DeleteText pos1 (text1 `mappend` text2) : xs
+        DeleteText pos1 (text2 `mappend` text1) : xs
     else
         if subV2 pos1 pos2 == (0, -1) then
             DeleteText pos2 (text1 `mappend` text2) : xs
         else
             DeleteText pos1 text1 : DeleteText pos2 text2 : xs
-
 compressHistory xs = xs

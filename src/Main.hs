@@ -74,7 +74,6 @@ loop state motherCWindow = do
             let newState = state {State.command = command}
 
             -- Change the state using the list of actions
-            -- state <- Handler.handleActions newState actions
             let (state, events) = handleActions newState actions []
             foldM (Event.handleEvent motherCWindow) state events
 

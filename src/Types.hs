@@ -18,6 +18,7 @@
 module Types where
 
 import qualified UI.NCurses as Curses
+import qualified Data.Text as Text
 
 type V2 = (Int, Int)
 type V4 = (Int, Int, Int, Int)
@@ -30,8 +31,6 @@ data Mode = CommandMode | InsertMode | LastLineMode | VisualMode |
             VisualLineMode | ReplaceMode
   deriving (Show, Eq)
 
-data PossibleMotion = CouldBeMotion | NoMotion | Motion
-
 data Command = CmdRight 
     | CmdLeft
     | CmdUp
@@ -42,6 +41,7 @@ data Command = CmdRight
     | CmdPaste
     | CmdYank
     | CmdDelete Int
+    | CmdDeleteLine Int
     | CmdDeleteChar
     | CmdQuit
     | CmdEndOfLine
@@ -67,6 +67,7 @@ data Action = ActIdle
     | ActCursorRight Int
     | ActCursorUp Int
     | ActDeleteChar Int
+    | ActDelete Int [Action]
     | ActEndOfLine
     | ActFirstNoneWhiteSpace
     | ActInsertChar Char
@@ -79,6 +80,8 @@ data Action = ActIdle
     | ActUndo Int
     | ActRedo Int
     | ActRedrawScreen
+    | ActErrorMessage Text.Text
+    | ActFlagUndoPoint
 
 -- All the events, which resemble disk operations or GUI changes
 data Event = EvIdle

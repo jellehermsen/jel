@@ -17,6 +17,7 @@
 
 module StateChange where
 
+import Control.Monad (foldM)
 import qualified Debug.Trace as Debug
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -103,14 +104,18 @@ changeState state (ActFirstNoneWhiteSpace) = do
     let whiteSpaceLength = Text.length $ Text.takeWhile (\x -> x == ' ' || x == '\t') line
     moveCursor state (0, -((snd cursorPos) - whiteSpaceLength))
 
+changeState state (ActFlagUndoPoint) = do
+    buffer <- getActiveBuffer state
+    let newBuffer = Buffer.flagUndoPoint buffer
+    return (replaceBuffer state newBuffer, [])
+
 -- Switch to insert mode
 changeState state (ActInsertMode) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     if Window.readonly window then
         Nothing
     else do
-        let newBuffer = Buffer.flagUndoPoint buffer
-        let newState = replaceBuffer state newBuffer
+        let newState = replaceBuffer state buffer
         return (newState {mode = InsertMode}, [])
 
 -- Switch to command mode
@@ -148,7 +153,7 @@ changeState state (ActInsertNewLine) = do
 changeState state (ActDeleteChar n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
-    newBuffer <- Buffer.deleteText buffer cursorPos n
+    (newBuffer, _) <- Buffer.deleteText buffer cursorPos n
     let (row, col) = Buffer.closestPos newBuffer $ Window.cursorPos window
     let newWindow = window { Window.cursorPos = (row, col)}
     let newState = (replaceBuffer state newBuffer) {
@@ -164,8 +169,9 @@ changeState state (ActUndo n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
     (newBuffer, newPos) <- Buffer.undo n cursorPos buffer
-
     let newWindow = window {Window.cursorPos = newPos}
+    traceMonad (Buffer.history newBuffer)
+    traceMonad (Buffer.undoDepth newBuffer)
     let newState = (replaceBuffer state newBuffer) {
         windows = Map.insert
             (Window.windowId window)
@@ -181,7 +187,7 @@ changeState state (ActRedo n) = do
     let cursorPos = Window.cursorPos window
     (newBuffer, newPos) <- Buffer.redo (n + 1) cursorPos buffer
 
-    let newWindow = window {Window.cursorPos = newPos}
+    let newWindow = window {Window.cursorPos = Buffer.closestPos newBuffer newPos}
     let newState = (replaceBuffer state newBuffer) {
         windows = Map.insert
             (Window.windowId window)
@@ -191,8 +197,41 @@ changeState state (ActRedo n) = do
 
     return (replaceBuffer newState newBuffer, [])
 
+-- Delete sections
+changeState state (ActDelete 0 motions) = Just (state, [])
+changeState state (ActDelete n motions) = do
+    oldWindow <- getActiveWindow state
+    let fromPos = Window.cursorPos oldWindow
+
+    changedState <- foldMotions (Just (state, [])) motions
+    (window, buffer) <- getActiveWindowAndBuffer $ fst changedState
+    let toPos = Window.cursorPos window
+
+    (newBuffer, removedText) <- Buffer.deleteSection buffer fromPos toPos
+
+    let newWindow = window {
+        Window.cursorPos = (
+            Buffer.closestPos newBuffer (smallestPos toPos fromPos)
+        )
+    }
+
+    let newState = (replaceBuffer state newBuffer) {
+        windows = Map.insert
+            (Window.windowId window)
+            (setScrollPos newWindow)
+            (State.windows state)
+    }
+
+    changeState newState $ (ActDelete (n - 1) motions)
+
 changeState state ActAdvanceCursor = advanceCursor state
 changeState state ActRedrawScreen = Just (state, [EvRedrawScreen])
-
 changeState state ActIdle = Nothing
 changeState state _ = Just (state, [EvQuit])
+
+foldMotions :: ChangedState -> [Action] -> ChangedState
+foldMotions Nothing _ = Nothing
+foldMotions (Just (state, _)) [] = Just (state, [])
+foldMotions (Just (state, _)) (motion:xs) = do
+    changedState <- changeState state motion
+    foldMotions (Just changedState) xs

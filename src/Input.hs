@@ -21,6 +21,8 @@ import Data.Char (isPrint)
 import qualified UI.NCurses as Curses
 import Types
 
+data PossibleMotion = CouldBeMotion | NoMotion | Motion
+
 parseInput :: Mode -> [Command] -> Curses.Event -> Either [Command] [Action]
 
 -- Numbers
@@ -77,7 +79,17 @@ parseInput CommandMode [] (Curses.EventCharacter 'x') = Right $ matchActions [Cm
 -- Delete sections
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'd') = Left [CmdDelete n]
 parseInput CommandMode [] (Curses.EventCharacter 'd') = Left [CmdDelete 1]
--- parseInput CommandMode (CmdDelete n):xs (eChar) =
+parseInput CommandMode [CmdDelete n] (Curses.EventCharacter 'd') = Right $ matchActions [CmdDeleteLine n]
+
+parseInput CommandMode ((CmdDelete n):xs) (eChar) =
+    case (isMotion possibleMotion) of
+        NoMotion      -> Right $ [ActErrorMessage "Invalid motion"]
+        CouldBeMotion -> Left $ ((CmdDelete n):motionCommands)
+        Motion        -> Right $ [ActFlagUndoPoint, ActDelete n motionActions]
+    where
+        possibleMotion = parseInput CommandMode xs eChar
+        motionActions = actions possibleMotion
+        motionCommands = commands possibleMotion
 
 -- Open new line
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'o') = Right $ matchActions [CmdAmount n, CmdOpenLine]
@@ -148,12 +160,12 @@ matchActions [CmdPageDown] = [ActPageDown 1]
 
 matchActions [CmdAmount n, CmdPageUp] = [ActPageUp n]
 matchActions [CmdPageUp] = [ActPageUp 1]
-matchActions [CmdInsertMode] = [ActInsertMode]
+matchActions [CmdInsertMode] = [ActFlagUndoPoint, ActInsertMode]
 matchActions [CmdInsertModeBefore] = [ActFirstNoneWhiteSpace, ActInsertMode]
 matchActions [CmdCommandMode] = [ActCommandMode]
 matchActions [CmdInsertChar c] = [ActInsertChar c]
-matchActions [CmdAmount n, CmdDeleteChar] = [ActDeleteChar n]
-matchActions [CmdDeleteChar] = [ActDeleteChar 1]
+matchActions [CmdAmount n, CmdDeleteChar] = [ActFlagUndoPoint, ActDeleteChar n]
+matchActions [CmdDeleteChar] = [ActFlagUndoPoint, ActDeleteChar 1]
 matchActions [CmdInsertNewLine] = [ActInsertNewLine, ActCursorDown 1, ActFirstNoneWhiteSpace]
 matchActions [CmdAmount n, CmdOpenLine] = matchActions [CmdOpenLine]
 matchActions [CmdOpenLine] = [ActCursorDown 1, ActBeginningOfLine, ActInsertNewLine, ActInsertMode]
@@ -167,3 +179,22 @@ matchActions [CmdRedrawScreen] = [ActRedrawScreen]
 
 matchActions [CmdAppend] = [ActAdvanceCursor, ActInsertMode]
 matchActions _ = [ActIdle]
+
+isMotion :: Either [Command] [Action] -> PossibleMotion
+isMotion (Left _) = CouldBeMotion
+isMotion (Right [ActBeginningOfLine])     = Motion
+isMotion (Right [ActCursorDown _])        = Motion
+isMotion (Right [ActCursorLeft _])        = Motion
+isMotion (Right [ActCursorRight _])       = Motion
+isMotion (Right [ActCursorUp _])          = Motion
+isMotion (Right (ActEndOfLine:_))         = Motion
+isMotion (Right [ActFirstNoneWhiteSpace]) = Motion
+isMotion _ = NoMotion
+
+actions :: Either [Command] [Action] -> [Action]
+actions (Left _) = []
+actions (Right xs) = xs
+
+commands :: Either [Command] [Action] -> [Command]
+commands (Right _) = []
+commands (Left xs) = xs

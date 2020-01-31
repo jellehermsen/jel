@@ -88,6 +88,12 @@ getActiveWindowAndBuffer state = do
     buffer <- getBufferById state (Window.buffer window)
     return (window, buffer)
 
+getActiveBuffer :: State -> Maybe Buffer.Buffer
+getActiveBuffer state = do
+    window <- getActiveWindow state
+    buffer <- getBufferById state (Window.buffer window)
+    return buffer
+
 insertBuffer :: State -> Buffer.BufferId -> Buffer.Buffer -> State
 insertBuffer state bufferId buffer = state {
     buffers = Map.insert bufferId buffer (buffers state)
