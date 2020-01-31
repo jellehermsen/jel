@@ -17,6 +17,7 @@
 
 module Buffer where
 
+import Data.Foldable (toList)
 import qualified Data.Sequence as Sequence
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -160,14 +161,20 @@ deleteSection buffer pos1 pos2
 deleteLine :: Buffer -> Int -> Maybe (Buffer, Text.Text)
 deleteLine buffer row = do
     text <- lineForPos buffer (row, 0)
+    let newLines = if lineCount buffer == 1
+        then
+            Sequence.fromList [""]
+        else
+            Sequence.deleteAt row (bLines buffer)
+
     Just (buffer {
-            bLines = Sequence.deleteAt row (bLines buffer),
+            bLines = newLines,
             history = (DeleteLine row text) :  history buffer
         }, text)
 
 deleteLines :: Buffer -> Int -> Int -> Maybe (Buffer, Text.Text)
 deleteLines buffer row1 row2 = do
-    let range = take (toRow - fromRow) $ repeat fromRow
+    let range = take (toRow - fromRow + 1) $ repeat fromRow
     (newBuffer, texts) <- deleteLines' (Just (buffer, [])) range
     return (newBuffer, Text.intercalate "\n" texts)
     where
@@ -185,64 +192,64 @@ deleteLines' (Just (buffer, texts)) (x:xs) = do
 -- = Undo / Redo =
 -- ===============
 
-replayPastEvents :: [PastEvent] -> (Int -> Int)
-                    -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
+redo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
+redo 0 pos buffer = Just (buffer, pos)
+redo count pos buffer = do
+    let his = reverse $ take (undoDepth buffer) (history buffer)
+    (newBuffer, newPosition) <- redoStep his $ Just (buffer, pos)
+    redo (count - 1) newPosition newBuffer
 
-replayPastEvents _ _ Nothing = Nothing
-replayPastEvents [] _ (Just (buf, pos)) = Just (buf, pos)
+redoStep :: [PastEvent] -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
 
-replayPastEvents (UndoFlag:xs) changeDepth (Just (buffer, pos)) = Just
-    ( buffer {undoDepth = changeDepth (undoDepth buffer)}
+redoStep _ Nothing = Nothing
+redoStep [] (Just (buf, pos)) = Just (buf, pos)
+
+redoStep (UndoFlag:xs) (Just (buffer, pos)) = Just
+    ( buffer {undoDepth = (undoDepth buffer) - 1}
     , pos
     )
 
-replayPastEvents (InsertText pos text:xs) changeDepth (Just (buffer, newPos)) = do
+redoStep (InsertText pos text:xs) (Just (buffer, newPos)) = do
     line <- lineForPos buffer pos
     let splitted = Text.splitAt (getCol pos) line
     let newLine = Text.concat [fst splitted, text, snd splitted]
     let newBuffer = buffer {
         bLines = Sequence.update (getRow pos) newLine (bLines buffer),
-        undoDepth = changeDepth (undoDepth buffer)
+        undoDepth = (undoDepth buffer) - 1
     }
-    replayPastEvents xs changeDepth (Just (newBuffer, pos))
+    redoStep xs (Just (newBuffer, pos))
 
 
-replayPastEvents (DeleteText pos text:xs) changeDepth (Just (buffer, newPos)) = do
+redoStep (DeleteText pos text:xs) (Just (buffer, newPos)) = do
     line <- lineForPos buffer pos
     let (first, removed, second) = split3 (getCol pos) (Text.length text) line
     if removed == text then
-        replayPastEvents xs changeDepth $ Just
+        redoStep xs $ Just
             ( buffer {
                 bLines = Sequence.update
                     (getRow pos)
                     (Text.concat [first, second])
                     (bLines buffer)
-                , undoDepth = changeDepth (undoDepth buffer)}
+                , undoDepth = (undoDepth buffer) - 1}
             , pos
             )
     else
         Nothing
 
-replayPastEvents (InsertLine row text:xs) changeDepth (Just (buffer, newPos)) = do
+redoStep (InsertLine row text:xs) (Just (buffer, newPos)) = do
     let newBuffer = buffer {
         bLines = Sequence.insertAt row text (bLines buffer),
-        undoDepth = changeDepth (undoDepth buffer)
+        undoDepth = (undoDepth buffer) - 1
     }
-    replayPastEvents xs changeDepth (Just (newBuffer, (row, 0)))
+    redoStep xs (Just (newBuffer, (row, 0)))
 
-replayPastEvents (DeleteLine row text:xs) changeDepth (Just (buffer, newPos)) = do
+redoStep (DeleteLine row text:xs) (Just (buffer, newPos)) = do
     let newBuffer = buffer {
         bLines = Sequence.deleteAt row (bLines buffer),
-        undoDepth = changeDepth (undoDepth buffer)
+        undoDepth = (undoDepth buffer) - 1
     }
-    replayPastEvents xs changeDepth (Just (newBuffer, (row, 0)))
+    redoStep xs (Just (newBuffer, (row, 0)))
 
-redo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
-redo 0 pos buffer = Just (buffer, pos)
-redo count pos buffer = do
-    let his = reverse $ take (undoDepth buffer) (history buffer)
-    (newBuffer, newPosition) <- replayPastEvents his (subtract 1) $ Just (buffer, pos)
-    redo (count - 1) newPosition newBuffer
 
 -- undo is called with the amount of "undos", for example 10 when you do 10u
 -- a cursor position and a buffer and it returns a tuple with the new buffer,
@@ -251,24 +258,59 @@ undo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
 undo 0 pos buffer = Just (buffer, pos)
 undo count pos buffer = do
     let his = drop (undoDepth buffer) (history buffer)
-    (newBuffer, newPos) <- undoStep his (add 1) $ Just (buffer, pos)
+    (newBuffer, newPos) <- undoStep his (Just (buffer, pos))
     undo (count - 1) newPos newBuffer
 
-undoStep :: [PastEvent] -> (Int -> Int) -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
-undoStep _ _ Nothing = Nothing
-undoStep [] _ buf = buf
+undoStep :: [PastEvent] -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
 
-undoStep (UndoFlag:xs) changeDepth bp =
-    replayPastEvents (UndoFlag:xs) changeDepth bp
+undoStep _ Nothing = Nothing
+undoStep [] (Just (buf, pos)) = Just (buf, pos)
 
-undoStep (InsertText pos text:xs) changeDepth bp =
-    replayPastEvents (DeleteText pos text:xs) changeDepth bp
+undoStep (UndoFlag:xs) (Just (buffer, pos)) = Just
+    ( buffer {undoDepth = undoDepth buffer + 1}
+    , pos
+    )
 
-undoStep (DeleteText pos text:xs) changeDepth bp =
-    replayPastEvents (InsertText pos text:xs) changeDepth bp
+undoStep (DeleteText pos text:xs) (Just (buffer, newPos)) = do
+    line <- lineForPos buffer pos
+    let splitted = Text.splitAt (getCol pos) line
+    let newLine = Text.concat [fst splitted, text, snd splitted]
+    let newBuffer = buffer {
+        bLines = Sequence.update (getRow pos) newLine (bLines buffer),
+        undoDepth = undoDepth buffer + 1
+    }
+    undoStep xs (Just (newBuffer, pos))
 
-undoStep (DeleteLine row text:xs) changeDepth bp =
-    replayPastEvents (InsertLine row text:xs) changeDepth bp
+
+undoStep (InsertText pos text:xs) (Just (buffer, newPos)) = do
+    line <- lineForPos buffer pos
+    let (first, removed, second) = split3 (getCol pos) (Text.length text) line
+    if removed == text then
+        undoStep xs $ Just
+            ( buffer {
+                bLines = Sequence.update
+                    (getRow pos)
+                    (Text.concat [first, second])
+                    (bLines buffer)
+                , undoDepth = (undoDepth buffer) + 1}
+            , pos
+            )
+    else
+        Nothing
+
+undoStep (DeleteLine row text:xs) (Just (buffer, newPos)) = do
+    let newBuffer = buffer {
+        bLines = Sequence.insertAt row text (bLines buffer),
+        undoDepth = (undoDepth buffer) + 1
+    }
+    undoStep xs (Just (newBuffer, (row, 0)))
+
+undoStep (InsertLine row text:xs) (Just (buffer, newPos)) = do
+    let newBuffer = buffer {
+        bLines = Sequence.deleteAt row (bLines buffer),
+        undoDepth = (undoDepth buffer) + 1
+    }
+    undoStep xs (Just (newBuffer, (row, 0)))
 
 -- ===========
 -- = History =

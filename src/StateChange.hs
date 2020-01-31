@@ -18,6 +18,7 @@
 module StateChange where
 
 import Control.Monad (foldM)
+import Data.Maybe (isNothing)
 import qualified Debug.Trace as Debug
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -203,7 +204,11 @@ changeState state (ActDelete n motions) = do
     oldWindow <- getActiveWindow state
     let fromPos = Window.cursorPos oldWindow
 
-    changedState <- foldMotions (Just (state, [])) motions
+    let motionLen = length motions
+
+    changedState <- foldMotions (Just (state, []))
+                    $ take (n * motionLen) (cycle motions)
+
     (window, buffer) <- getActiveWindowAndBuffer $ fst changedState
     let toPos = Window.cursorPos window
 
@@ -225,16 +230,20 @@ changeState state (ActDelete n motions) = do
             (setScrollPos newWindow)
             (State.windows state)
     }
-    changeState newState $ (ActDelete (n - 1) motions)
+    return (newState, [])
 
 changeState state ActAdvanceCursor = advanceCursor state
 changeState state ActRedrawScreen = Just (state, [EvRedrawScreen])
 changeState state ActIdle = Nothing
+changeState state (ActErrorMessage t) = Nothing
 changeState state _ = Just (state, [EvQuit])
 
 foldMotions :: ChangedState -> [Action] -> ChangedState
 foldMotions Nothing _ = Nothing
 foldMotions (Just (state, _)) [] = Just (state, [])
 foldMotions (Just (state, _)) (motion:xs) = do
-    changedState <- changeState state motion
-    foldMotions (Just changedState) xs
+    let changedState = changeState state motion
+    if isNothing changedState then
+        Just (state, [])
+    else
+        foldMotions changedState xs
