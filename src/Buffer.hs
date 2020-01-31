@@ -39,6 +39,7 @@ data PastEvent = UndoFlag
     | SplitLine Types.Position
     | JoinLine Int Text.Text
     | DeleteLine Int Text.Text
+    | InsertLine Int Text.Text
   deriving (Show, Eq)
 
 data Buffer = Buffer
@@ -156,6 +157,30 @@ deleteSection buffer pos1 pos2
         fromPos@(fromRow, fromCol) = smallestPos pos1 pos2
         toPos@(toRow, toCol) = largestPos pos1 pos2
 
+deleteLine :: Buffer -> Int -> Maybe (Buffer, Text.Text)
+deleteLine buffer row = do
+    text <- lineForPos buffer (row, 0)
+    Just (buffer {
+            bLines = Sequence.deleteAt row (bLines buffer),
+            history = (DeleteLine row text) :  history buffer
+        }, text)
+
+deleteLines :: Buffer -> Int -> Int -> Maybe (Buffer, Text.Text)
+deleteLines buffer row1 row2 = do
+    let range = take (toRow - fromRow) $ repeat fromRow
+    (newBuffer, texts) <- deleteLines' (Just (buffer, [])) range
+    return (newBuffer, Text.intercalate "\n" texts)
+    where
+        fromRow = min row1 row2
+        toRow = max row1 row2
+
+deleteLines' :: Maybe (Buffer, [Text.Text]) -> [Int] -> Maybe (Buffer, [Text.Text])
+deleteLines' Nothing _ = Nothing
+deleteLines' x [] = x
+deleteLines' (Just (buffer, texts)) (x:xs) = do
+    (newBuffer, text) <- deleteLine buffer x
+    deleteLines' (Just (newBuffer, text:texts)) xs
+
 -- ===============
 -- = Undo / Redo =
 -- ===============
@@ -198,6 +223,20 @@ replayPastEvents (DeleteText pos text:xs) changeDepth (Just (buffer, newPos)) = 
     else
         Nothing
 
+replayPastEvents (InsertLine row text:xs) changeDepth (Just (buffer, newPos)) = do
+    let newBuffer = buffer {
+        bLines = Sequence.insertAt row text (bLines buffer),
+        undoDepth = changeDepth (undoDepth buffer)
+    }
+    replayPastEvents xs changeDepth (Just (newBuffer, (row, 0)))
+
+replayPastEvents (DeleteLine row text:xs) changeDepth (Just (buffer, newPos)) = do
+    let newBuffer = buffer {
+        bLines = Sequence.deleteAt row (bLines buffer),
+        undoDepth = changeDepth (undoDepth buffer)
+    }
+    replayPastEvents xs changeDepth (Just (newBuffer, (row, 0)))
+
 redo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
 redo 0 pos buffer = Just (buffer, pos)
 redo count pos buffer = do
@@ -227,6 +266,9 @@ undoStep (InsertText pos text:xs) changeDepth bp =
 
 undoStep (DeleteText pos text:xs) changeDepth bp =
     replayPastEvents (InsertText pos text:xs) changeDepth bp
+
+undoStep (DeleteLine row text:xs) changeDepth bp =
+    replayPastEvents (InsertLine row text:xs) changeDepth bp
 
 -- ===========
 -- = History =

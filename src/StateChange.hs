@@ -207,7 +207,11 @@ changeState state (ActDelete n motions) = do
     (window, buffer) <- getActiveWindowAndBuffer $ fst changedState
     let toPos = Window.cursorPos window
 
-    (newBuffer, removedText) <- Buffer.deleteSection buffer fromPos toPos
+    (newBuffer, removedText) <- 
+        if (getRow fromPos == getRow toPos) then 
+            Buffer.deleteSection buffer fromPos toPos
+        else
+            Buffer.deleteLines buffer (getRow fromPos) (getRow toPos)
 
     let newWindow = window {
         Window.cursorPos = (
@@ -221,7 +225,6 @@ changeState state (ActDelete n motions) = do
             (setScrollPos newWindow)
             (State.windows state)
     }
-
     changeState newState $ (ActDelete (n - 1) motions)
 
 changeState state ActAdvanceCursor = advanceCursor state
