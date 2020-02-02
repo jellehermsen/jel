@@ -95,6 +95,9 @@ parseInput CommandMode ((CmdDelete n):xs) (eChar) =
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'o') = Right $ matchActions [CmdAmount n, CmdOpenLine]
 parseInput CommandMode [] (Curses.EventCharacter 'o') = Right $ matchActions [CmdOpenLine]
 
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'O') = Right $ matchActions [CmdAmount n, CmdOpenLineBefore]
+parseInput CommandMode [] (Curses.EventCharacter 'O') = Right $ matchActions [CmdOpenLineBefore]
+
 -- Switch to insert after mode
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'i') = Right $ matchActions [CmdInsertMode]
 parseInput CommandMode [] (Curses.EventCharacter 'i') = Right $ matchActions [CmdInsertMode]
@@ -123,16 +126,25 @@ parseInput InsertMode [] (Curses.EventCharacter c) = if isPrint c
     else
         Left []
 
+-- Undo
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'u') = Right $ matchActions [CmdAmount n, CmdUndo]
 parseInput CommandMode [] (Curses.EventCharacter 'u') = Right $ matchActions [CmdUndo]
 
+-- Redo
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\DC2') = Right $ matchActions [CmdAmount n, CmdRedo]
 parseInput CommandMode [] (Curses.EventCharacter '\DC2') = Right $ matchActions [CmdRedo]
+
+-- Repeat last modification (dot command)
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '.') = Right $ matchActions [CmdAmount n, CmdRepeat]
+parseInput CommandMode [] (Curses.EventCharacter '.') = Right $ matchActions [CmdRepeat]
 
 -- Quit on ctrl-q
 parseInput mode cmds (Curses.EventCharacter '\DC1') = Right [ActQuit]
 
 parseInput _ _ _ = Left []
+
+
+
 
 -- Map a list of commands to a list of actions
 matchActions :: [Command] -> [Action]
@@ -166,16 +178,21 @@ matchActions [CmdCommandMode] = [ActCommandMode]
 matchActions [CmdInsertChar c] = [ActInsertChar c]
 matchActions [CmdAmount n, CmdDeleteChar] = [ActFlagUndoPoint, ActDeleteChar n]
 matchActions [CmdDeleteChar] = [ActFlagUndoPoint, ActDeleteChar 1]
+matchActions [CmdDeleteLine n] = [ActFlagUndoPoint, ActDeleteLine n]
 matchActions [CmdInsertNewLine] = [ActInsertNewLine, ActCursorDown 1, ActFirstNoneWhiteSpace]
 matchActions [CmdAmount n, CmdOpenLine] = matchActions [CmdOpenLine]
-matchActions [CmdOpenLine] = [ActCursorDown 1, ActBeginningOfLine, ActInsertNewLine, ActInsertMode]
-
+matchActions [CmdOpenLine] = [ActFlagUndoPoint, ActEndOfLine, ActAdvanceCursor, ActInsertNewLine, ActCursorDown 1, ActInsertMode]
+matchActions [CmdAmount n, CmdOpenLineBefore] = matchActions [CmdOpenLineBefore]
+matchActions [CmdOpenLineBefore] = [ActBeginningOfLine, ActInsertNewLine, ActInsertMode]
 matchActions [CmdAmount n, CmdUndo] = [ActUndo n]
 matchActions [CmdUndo] = [ActUndo 1]
 
 matchActions [CmdAmount n, CmdRedo] = [ActRedo n]
 matchActions [CmdRedo] = [ActRedo 1]
 matchActions [CmdRedrawScreen] = [ActRedrawScreen]
+
+matchActions [CmdAmount n, CmdRepeat] = [ActRepeat n]
+matchActions [CmdRepeat] = [ActRepeat 1]
 
 matchActions [CmdAppend] = [ActAdvanceCursor, ActInsertMode]
 matchActions _ = [ActIdle]

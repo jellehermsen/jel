@@ -44,7 +44,7 @@ moveCursor state dPos = do
                     (State.windows state)
             }
             Just (newState, [])
-        else
+        else do
             Nothing
 
 -- Advances the cursor by one character, possibly putting it in a position
@@ -138,7 +138,7 @@ changeState state (ActCommandMode) = do
 changeState state (ActInsertChar c) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
-    newBuffer <- Buffer.insertChar buffer cursorPos c
+    newBuffer <- Buffer.insertChar buffer cursorPos c True
     let newState = replaceBuffer state newBuffer
     movedCursor <- advanceCursor newState
     return (fst movedCursor, [])
@@ -147,14 +147,14 @@ changeState state (ActInsertChar c) = do
 changeState state (ActInsertNewLine) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
-    newBuffer <- Buffer.splitLine buffer cursorPos
+    newBuffer <- Buffer.splitLine buffer cursorPos True
     return (replaceBuffer state newBuffer, [])
 
 -- Delete characters
 changeState state (ActDeleteChar n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
-    (newBuffer, _) <- Buffer.deleteText buffer cursorPos n
+    (newBuffer, _) <- Buffer.deleteText buffer cursorPos n True
     let (row, col) = Buffer.closestPos newBuffer $ Window.cursorPos window
     let newWindow = window { Window.cursorPos = (row, col)}
     let newState = (replaceBuffer state newBuffer) {
@@ -231,6 +231,35 @@ changeState state (ActDelete n motions) = do
             (State.windows state)
     }
     return (newState, [])
+
+-- Delete lines
+changeState state (ActDeleteLine n) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let (row, col) = Window.cursorPos window
+    let (targetRow, _) = Buffer.closestPos buffer (row + n - 1, 0)
+
+    (newBuffer, removedText) <-
+        Buffer.deleteLines buffer row targetRow
+
+    let newWindow = window {
+        Window.cursorPos = (
+            Buffer.closestPos newBuffer (row, col)
+        )
+    }
+
+    let newState = (replaceBuffer state newBuffer) {
+        windows = Map.insert
+            (Window.windowId window)
+            (setScrollPos newWindow)
+            (State.windows state)
+    }
+    return (newState, [])
+
+-- Repeat
+changeState state (ActRepeat n) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let pos = Window.cursorPos window
+    return (state, [])
 
 changeState state ActAdvanceCursor = advanceCursor state
 changeState state ActRedrawScreen = Just (state, [EvRedrawScreen])

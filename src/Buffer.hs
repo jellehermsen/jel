@@ -28,7 +28,6 @@ import Types
 -- ===========================
 -- =         Types           =
 -- ===========================
-
 type Marks = Map.Map Text.Text Types.Position
 type BufferId = Id
 type Indentation = Int
@@ -62,11 +61,9 @@ newBuffer bufferId = Buffer
     , undoDepth = 0
     }
 
-
 -- ==========================
 -- = Small helper functions =
 -- ==========================
-
 lineCount :: Buffer -> Int
 lineCount buffer =  Sequence.length $ bLines buffer
 
@@ -103,53 +100,64 @@ closestPos buffer (row, col) = (closestRow, closestCol)
 -- =====================
 -- = Buffer operations =
 -- =====================
-
-insertText :: Buffer -> Position -> Text.Text -> Maybe Buffer
-insertText buffer pos text = do
+insertText :: Buffer -> Position -> Text.Text -> Bool -> Maybe Buffer
+insertText buffer pos text updateHistory = do
     line <- lineForPos buffer pos
     let splitted = Text.splitAt (getCol pos) line
     let newLine = Text.concat [fst splitted, text, snd splitted]
     Just buffer {
         bLines = Sequence.update (getRow pos) newLine (bLines buffer),
-        history = compressHistory $ InsertText pos text : history buffer
+        history = if updateHistory
+            then
+                compressHistory $ InsertText pos text : history buffer
+            else
+                history buffer
     }
 
-insertChar :: Buffer -> Position -> Char -> Maybe Buffer
+insertChar :: Buffer -> Position -> Char -> Bool -> Maybe Buffer
 insertChar buffer pos c = insertText buffer pos (Text.singleton c)
 
-splitLine :: Buffer -> Position -> Maybe Buffer
-splitLine buffer pos = do
+splitLine :: Buffer -> Position -> Bool -> Maybe Buffer
+splitLine buffer pos updateHistory = do
     let row = getRow pos
     line <- lineForPos buffer pos
     let splitted = Text.splitAt (getCol pos) line
     let newLine = fst splitted
-
     let newLines = Sequence.insertAt (row + 1) (snd splitted)
                    $ Sequence.update row (fst splitted) (bLines buffer)
 
     Just buffer {
         bLines = newLines,
-        history = SplitLine pos : history buffer
+        history = if updateHistory
+            then
+                SplitLine pos : history buffer
+            else
+                history buffer
     }
 
-deleteText :: Buffer -> Position -> Int -> Maybe (Buffer, Text.Text)
-deleteText buffer pos n = do
+deleteText :: Buffer -> Position -> Int -> Bool -> Maybe (Buffer, Text.Text)
+deleteText buffer pos n updateHistory = do
     line <- lineForPos buffer pos
     if Text.length line == 0 then
         Nothing
     else do
         let (first, removed, second) = split3 (getCol pos) n line
-        Just (buffer {
+        Just (
+            buffer {
                 bLines = Sequence.update
                     (getRow pos)
                     (Text.concat [first, second])
                     (bLines buffer)
-                , history = compressHistory $ DeleteText pos removed : history buffer
+                , history = if updateHistory
+                    then
+                        compressHistory $ DeleteText pos removed : history buffer
+                    else
+                        history buffer
             }, removed)
 
 deleteSection :: Buffer -> Position -> Position -> Maybe (Buffer, Text.Text)
 deleteSection buffer pos1 pos2
-    | fromRow == toRow = deleteText buffer fromPos (toCol - fromCol + 1)
+    | fromRow == toRow = deleteText buffer fromPos (toCol - fromCol + 1) True
     | toRow == fromRow + 1 =
         return (buffer, "")
     | otherwise =
@@ -191,6 +199,11 @@ deleteLines' (Just (buffer, texts)) (x:xs) = do
 -- ===============
 -- = Undo / Redo =
 -- ===============
+decUndoDepth :: Buffer -> Buffer
+decUndoDepth buffer = buffer {undoDepth = undoDepth buffer - 1}
+
+incUndoDepth :: Buffer -> Buffer
+incUndoDepth buffer = buffer {undoDepth = undoDepth buffer + 1}
 
 redo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
 redo 0 pos buffer = Just (buffer, pos)
@@ -204,37 +217,15 @@ redoStep :: [PastEvent] -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
 redoStep _ Nothing = Nothing
 redoStep [] (Just (buf, pos)) = Just (buf, pos)
 
-redoStep (UndoFlag:xs) (Just (buffer, pos)) = Just
-    ( buffer {undoDepth = (undoDepth buffer) - 1}
-    , pos
-    )
+redoStep (UndoFlag:xs) (Just (buffer, pos)) = Just (decUndoDepth buffer, pos)
 
 redoStep (InsertText pos text:xs) (Just (buffer, newPos)) = do
-    line <- lineForPos buffer pos
-    let splitted = Text.splitAt (getCol pos) line
-    let newLine = Text.concat [fst splitted, text, snd splitted]
-    let newBuffer = buffer {
-        bLines = Sequence.update (getRow pos) newLine (bLines buffer),
-        undoDepth = (undoDepth buffer) - 1
-    }
-    redoStep xs (Just (newBuffer, pos))
-
+    newBuffer <- insertText buffer pos text False
+    redoStep xs (Just (decUndoDepth newBuffer, pos))
 
 redoStep (DeleteText pos text:xs) (Just (buffer, newPos)) = do
-    line <- lineForPos buffer pos
-    let (first, removed, second) = split3 (getCol pos) (Text.length text) line
-    if removed == text then
-        redoStep xs $ Just
-            ( buffer {
-                bLines = Sequence.update
-                    (getRow pos)
-                    (Text.concat [first, second])
-                    (bLines buffer)
-                , undoDepth = (undoDepth buffer) - 1}
-            , pos
-            )
-    else
-        Nothing
+    (newBuffer, _) <- deleteText buffer pos (Text.length text) False
+    redoStep xs (Just (decUndoDepth newBuffer, pos))
 
 redoStep (InsertLine row text:xs) (Just (buffer, newPos)) = do
     let newBuffer = buffer {
@@ -250,6 +241,9 @@ redoStep (DeleteLine row text:xs) (Just (buffer, newPos)) = do
     }
     redoStep xs (Just (newBuffer, (row, 0)))
 
+redoStep (SplitLine pos@(row, col):xs) (Just (buffer, newPos)) = do
+    newBuffer <- splitLine buffer pos False
+    redoStep xs (Just (decUndoDepth newBuffer, (row + 1, col)))
 
 -- undo is called with the amount of "undos", for example 10 when you do 10u
 -- a cursor position and a buffer and it returns a tuple with the new buffer,
@@ -266,37 +260,15 @@ undoStep :: [PastEvent] -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
 undoStep _ Nothing = Nothing
 undoStep [] (Just (buf, pos)) = Just (buf, pos)
 
-undoStep (UndoFlag:xs) (Just (buffer, pos)) = Just
-    ( buffer {undoDepth = undoDepth buffer + 1}
-    , pos
-    )
+undoStep (UndoFlag:xs) (Just (buffer, pos)) = Just (incUndoDepth buffer, pos)
 
 undoStep (DeleteText pos text:xs) (Just (buffer, newPos)) = do
-    line <- lineForPos buffer pos
-    let splitted = Text.splitAt (getCol pos) line
-    let newLine = Text.concat [fst splitted, text, snd splitted]
-    let newBuffer = buffer {
-        bLines = Sequence.update (getRow pos) newLine (bLines buffer),
-        undoDepth = undoDepth buffer + 1
-    }
-    undoStep xs (Just (newBuffer, pos))
-
+    newBuffer <- insertText buffer pos text False
+    undoStep xs (Just (incUndoDepth newBuffer, pos))
 
 undoStep (InsertText pos text:xs) (Just (buffer, newPos)) = do
-    line <- lineForPos buffer pos
-    let (first, removed, second) = split3 (getCol pos) (Text.length text) line
-    if removed == text then
-        undoStep xs $ Just
-            ( buffer {
-                bLines = Sequence.update
-                    (getRow pos)
-                    (Text.concat [first, second])
-                    (bLines buffer)
-                , undoDepth = (undoDepth buffer) + 1}
-            , pos
-            )
-    else
-        Nothing
+    (newBuffer, _) <- deleteText buffer pos (Text.length text) False
+    undoStep xs (Just (incUndoDepth newBuffer, pos))
 
 undoStep (DeleteLine row text:xs) (Just (buffer, newPos)) = do
     let newBuffer = buffer {
@@ -311,6 +283,18 @@ undoStep (InsertLine row text:xs) (Just (buffer, newPos)) = do
         undoDepth = (undoDepth buffer) + 1
     }
     undoStep xs (Just (newBuffer, (row, 0)))
+
+undoStep (SplitLine pos@(row, col):xs) (Just (buffer, newPos)) = do
+   line1 <- lineForPos buffer pos
+   line2 <- lineForPos buffer (row + 1, 0)
+
+   let newBuffer = buffer {
+       bLines = Sequence.update (row) (Text.concat [line1, line2])
+                $ Sequence.deleteAt (row + 1) (bLines buffer),
+       undoDepth = (undoDepth buffer) + 1
+   }
+
+   undoStep xs (Just (newBuffer, (row, 0)))
 
 -- ===========
 -- = History =

@@ -31,32 +31,34 @@ data Mode = CommandMode | InsertMode | LastLineMode | VisualMode |
             VisualLineMode | ReplaceMode
   deriving (Show, Eq)
 
-data Command = CmdRight 
-    | CmdLeft
-    | CmdUp
-    | CmdDown
-    | CmdPageDown
-    | CmdPageUp
-    | CmdAmount Int
-    | CmdPaste
-    | CmdYank
-    | CmdDelete Int
-    | CmdDeleteLine Int
-    | CmdDeleteChar
-    | CmdQuit
-    | CmdEndOfLine
+data Command = CmdAmount Int
+    | CmdAppend
     | CmdBeginningOfLine
+    | CmdCommandMode
+    | CmdDelete Int
+    | CmdDeleteChar
+    | CmdDeleteLine Int
+    | CmdDown
+    | CmdEndOfLine
     | CmdFirstNoneWhiteSpace
+    | CmdInsertChar Char
     | CmdInsertMode
     | CmdInsertModeBefore
-    | CmdCommandMode
-    | CmdInsertChar Char
     | CmdInsertNewLine
+    | CmdLeft
     | CmdOpenLine
-    | CmdUndo
+    | CmdOpenLineBefore
+    | CmdPageDown
+    | CmdPageUp
+    | CmdPaste
+    | CmdQuit
     | CmdRedo
     | CmdRedrawScreen
-    | CmdAppend
+    | CmdRepeat
+    | CmdRight
+    | CmdUndo
+    | CmdUp
+    | CmdYank
 
 -- All the possible actions in the editor
 data Action = ActIdle
@@ -68,6 +70,7 @@ data Action = ActIdle
     | ActCursorUp Int
     | ActDeleteChar Int
     | ActDelete Int [Action]
+    | ActDeleteLine Int
     | ActEndOfLine
     | ActFirstNoneWhiteSpace
     | ActInsertChar Char
@@ -82,6 +85,7 @@ data Action = ActIdle
     | ActRedrawScreen
     | ActErrorMessage Text.Text
     | ActFlagUndoPoint
+    | ActRepeat Int
 
 -- All the events, which resemble disk operations or GUI changes
 data Event = EvIdle
