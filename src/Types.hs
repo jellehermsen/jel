@@ -59,6 +59,7 @@ data Command = CmdAmount Int
     | CmdUndo
     | CmdUp
     | CmdYank
+    | CmdJoinLine
 
 -- All the possible actions in the editor
 data Action = ActIdle
@@ -86,6 +87,7 @@ data Action = ActIdle
     | ActErrorMessage Text.Text
     | ActFlagUndoPoint
     | ActRepeat Int
+    | ActJoinLine Int
 
 -- All the events, which resemble disk operations or GUI changes
 data Event = EvIdle

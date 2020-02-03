@@ -126,6 +126,10 @@ parseInput InsertMode [] (Curses.EventCharacter c) = if isPrint c
     else
         Left []
 
+-- Join lines
+parseInput CommandMode [] (Curses.EventCharacter 'J') = Right $ matchActions [CmdJoinLine]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'J') = Right $ matchActions [CmdAmount n, CmdJoinLine]
+
 -- Undo
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'u') = Right $ matchActions [CmdAmount n, CmdUndo]
 parseInput CommandMode [] (Curses.EventCharacter 'u') = Right $ matchActions [CmdUndo]
@@ -186,6 +190,9 @@ matchActions [CmdAmount n, CmdOpenLineBefore] = matchActions [CmdOpenLineBefore]
 matchActions [CmdOpenLineBefore] = [ActBeginningOfLine, ActInsertNewLine, ActInsertMode]
 matchActions [CmdAmount n, CmdUndo] = [ActUndo n]
 matchActions [CmdUndo] = [ActUndo 1]
+matchActions [CmdAmount 1, CmdJoinLine] = [ActFlagUndoPoint, ActJoinLine 2]
+matchActions [CmdAmount n, CmdJoinLine] = [ActFlagUndoPoint, ActJoinLine n]
+matchActions [CmdJoinLine] = [ActFlagUndoPoint, ActJoinLine 2]
 
 matchActions [CmdAmount n, CmdRedo] = [ActRedo n]
 matchActions [CmdRedo] = [ActRedo 1]

@@ -165,6 +165,14 @@ changeState state (ActDeleteChar n) = do
     }
     return (newState, [])
 
+-- Join lines
+changeState state (ActJoinLine n) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let cursorPos = Window.cursorPos window
+    newBuffer <- Buffer.joinLines buffer cursorPos n True
+    let newState = replaceBuffer state newBuffer
+    return (newState, [])
+
 -- Undo
 changeState state (ActUndo n) = do
     (window, buffer) <- getActiveWindowAndBuffer state

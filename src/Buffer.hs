@@ -37,7 +37,6 @@ data PastEvent = UndoFlag
     | DeleteText Types.Position Text.Text
     | ReplaceText Types.Position Text.Text Text.Text
     | SplitLine Types.Position
-    | JoinLine Int Text.Text
     | DeleteLine Int Text.Text
     | InsertLine Int Text.Text
   deriving (Show, Eq)
@@ -73,29 +72,25 @@ lineForPos buf (row, _) = Sequence.lookup row $ bLines buf
 closestPos :: Buffer -> Position -> Position
 closestPos buffer (row, col) = (closestRow, closestCol)
     where
-        lengthRow = fromIntegral $ lineCount buffer
-        closestRow = if row < 0
-            then
-                0
-            else
-                if row >= lengthRow then
-                    lengthRow - 1
-                else
-                    row
-        line = Sequence.index (bLines buffer) $ fromIntegral closestRow
+        rowLength  = fromIntegral $ lineCount buffer
+        line       = Sequence.index (bLines buffer) $ fromIntegral closestRow
         lineLength = fromIntegral (Text.length line)
-        closestCol = if col < 0
-            then
-                0
-            else 
-                if lineLength == 0 then
-                    0
-                else
-                    if col >= lineLength then
-                        lineLength - 1
-                    else
-                        col
+        closestRow
+            | row < 0           = 0
+            | row >= rowLength  = rowLength - 1
+            | otherwise         = row
+        closestCol
+            | col < 0           = 0
+            | lineLength == 0   = 0
+            | col >= lineLength = lineLength - 1
+            | otherwise         = col
 
+getLineRange :: Buffer -> Int -> Int -> Maybe (Sequence.Seq Text.Text)
+getLineRange buffer from count
+    | Sequence.length selection == 0 = Nothing
+    | otherwise                      = Just selection
+    where
+        selection = Sequence.take count $ Sequence.drop from $ bLines buffer
 
 -- =====================
 -- = Buffer operations =
@@ -122,7 +117,6 @@ splitLine buffer pos updateHistory = do
     let row = getRow pos
     line <- lineForPos buffer pos
     let splitted = Text.splitAt (getCol pos) line
-    let newLine = fst splitted
     let newLines = Sequence.insertAt (row + 1) (snd splitted)
                    $ Sequence.update row (fst splitted) (bLines buffer)
 
@@ -134,6 +128,22 @@ splitLine buffer pos updateHistory = do
             else
                 history buffer
     }
+
+joinLines :: Buffer -> Position -> Int -> Bool -> Maybe Buffer
+joinLines buffer pos@(row, _) count updateHistory = do
+    selection <- getLineRange buffer row count
+    let list = toList selection
+    let newLine = Text.intercalate " " $ map Text.strip list
+    (buf, _) <- deleteLines buffer row (row+count)
+    let newBuffer = buf {
+        bLines = Sequence.insertAt row newLine (bLines buf),
+        history = if updateHistory
+            then
+                compressHistory $ InsertLine row newLine : history buf
+            else
+                history buf
+    }
+    return newBuffer
 
 deleteText :: Buffer -> Position -> Int -> Bool -> Maybe (Buffer, Text.Text)
 deleteText buffer pos n updateHistory = do
@@ -299,7 +309,6 @@ undoStep (SplitLine pos@(row, col):xs) (Just (buffer, newPos)) = do
 -- ===========
 -- = History =
 -- ===========
-
 flagUndoPoint :: Buffer -> Buffer
 flagUndoPoint buffer = if hasHistory && lastEvent /= UndoFlag
     then
