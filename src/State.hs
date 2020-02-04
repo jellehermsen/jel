@@ -63,7 +63,7 @@ newState firstWindow lastLineCWindow screenSize = State
     , search = ""
     , command = []
     , lastAction = ActIdle
-    , lastLine = "Woep woep"
+    , lastLine = ""
     , lastLineCWindow = lastLineCWindow
     , lastLineHistory = []
     , searchHistory = []
@@ -116,7 +116,3 @@ setScrollPos w = if inWindow
         inWindow = posInRange (Window.cursorPos w) viewPort
         diff = posDiff (Window.cursorPos w) viewPort
         newScrollPos = addV2 (Window.scrollPos w) diff
-
--- Set the cursor position in a window
--- setCursorPos :: Window.Window -> Position -> Window.Window
--- setCursorPos

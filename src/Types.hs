@@ -60,6 +60,12 @@ data Command = CmdAmount Int
     | CmdUp
     | CmdYank
     | CmdJoinLine
+    | CmdFindForward
+    | CmdFindBackward
+    | CmdChar Char
+    | CmdGotoLastLine
+    | CmdGotoLine
+    | CmdGotoFirstLine
 
 -- All the possible actions in the editor
 data Action = ActIdle
@@ -88,6 +94,10 @@ data Action = ActIdle
     | ActFlagUndoPoint
     | ActRepeat Int
     | ActJoinLine Int
+    | ActFindForward Int Char
+    | ActFindBackward Int Char
+    | ActGotoLine Int
+    | ActGotoLastLine
 
 -- All the events, which resemble disk operations or GUI changes
 data Event = EvIdle

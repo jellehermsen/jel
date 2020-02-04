@@ -77,12 +77,18 @@ renderAll state = do
             let height = fst $ Window.size window 
             let scrollCol  = snd $ Window.scrollPos window
             let scrollRow  = fst $ Window.scrollPos window
+            let emptyLine = Text.concat ["@", Text.replicate (width - 1) " "]
+            colorIdNormal <- Curses.newColorID (Curses.ColorWhite) (Curses.Color 200) 200
+            colorIdComment <- Curses.newColorID (Curses.Color 201) (Curses.Color 200) 201
             Curses.updateWindow cw $ do
                 case buffer of
                     Just b -> do
+                        Curses.setColor colorIdNormal
                         let lines = fmap (prepLine scrollCol width) $ Sequence.drop (fromIntegral scrollRow) (Buffer.bLines b)
                         let count = (fromIntegral $ Sequence.length lines) - 1
                         mapM (\y -> drawTextAt y 0 (Window.size window) (Sequence.index lines (fromIntegral y))) [0..count]
+                        Curses.setColor colorIdComment
+                        mapM (\y -> drawTextAt y 0 (Window.size window) emptyLine) [(count + 1)..height]
                 drawTextAt (height) 0 (width, height) (Text.pack (show (State.mode state )))
                 resetCursor window
             return ()

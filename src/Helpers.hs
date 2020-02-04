@@ -25,6 +25,9 @@ import Types
 addPos :: Position -> Position -> Position
 addPos (row1, col1) (row2, col2) = (row1 + row2, col1 + col2)
 
+subPos :: Position -> Position -> Position
+subPos (row1, col1) (row2, col2) = (row1 - row2, col1 - col2)
+
 getRow :: Position -> Int
 getRow = fst
 
@@ -68,6 +71,16 @@ insertChar pos c t =
         splitted = Text.splitAt pos t
     in
        Text.concat [fst splitted, Text.singleton c, snd splitted]
+
+findNthIndex :: Int -> Int -> Char -> Text.Text -> Maybe Int
+findNthIndex = findNthIndex' 0
+
+findNthIndex' :: Int -> Int -> Int -> Char -> Text.Text -> Maybe Int
+findNthIndex' total _ 0 _ _ = Just $ total - 1
+findNthIndex' total col n c text = do
+    let shortenedText = Text.drop (col + 1) text
+    index <- Text.findIndex (\x -> x == c) shortenedText
+    findNthIndex' (total + index + 1) index (n - 1) c shortenedText
 
 -- Functions for debugging
 traceMonad :: (Show a, Monad m) => a -> m a

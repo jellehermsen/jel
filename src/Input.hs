@@ -72,6 +72,18 @@ parseInput CommandMode [] (Curses.EventCharacter '\EOT') = Right $ matchActions 
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\NAK') = Right $ matchActions [CmdAmount n, CmdPageUp]
 parseInput CommandMode [] (Curses.EventCharacter '\NAK') = Right $ matchActions [CmdPageUp]
 
+-- Find forward
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'f') = Left $ [CmdAmount n, CmdFindForward]
+parseInput CommandMode [] (Curses.EventCharacter 'f') = Left $ [CmdFindForward]
+parseInput CommandMode [CmdAmount n, CmdFindForward] (Curses.EventCharacter c) = Right $ matchActions [CmdAmount n, CmdFindForward, CmdChar c]
+parseInput CommandMode [CmdFindForward] (Curses.EventCharacter c) = Right $ matchActions [CmdFindForward, CmdChar c]
+
+-- Find backward
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'F') = Left $ [CmdAmount n, CmdFindBackward]
+parseInput CommandMode [] (Curses.EventCharacter 'F') = Left $ [CmdFindBackward]
+parseInput CommandMode [CmdAmount n, CmdFindBackward] (Curses.EventCharacter c) = Right $ matchActions [CmdAmount n, CmdFindBackward, CmdChar c]
+parseInput CommandMode [CmdFindBackward] (Curses.EventCharacter c) = Right $ matchActions [CmdFindBackward, CmdChar c]
+
 -- Delete character(s)
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'x') = Right $ matchActions [CmdAmount n, CmdDeleteChar]
 parseInput CommandMode [] (Curses.EventCharacter 'x') = Right $ matchActions [CmdDeleteChar]
@@ -138,6 +150,13 @@ parseInput CommandMode [] (Curses.EventCharacter 'u') = Right $ matchActions [Cm
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '\DC2') = Right $ matchActions [CmdAmount n, CmdRedo]
 parseInput CommandMode [] (Curses.EventCharacter '\DC2') = Right $ matchActions [CmdRedo]
 
+-- Goto line
+parseInput CommandMode [] (Curses.EventCharacter 'G') = Right $ matchActions [CmdGotoLastLine]
+parseInput CommandMode [] (Curses.EventCharacter 'g') = Left [CmdGotoLine]
+parseInput CommandMode [CmdGotoLine] (Curses.EventCharacter 'g') = Right $ matchActions [CmdGotoFirstLine]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'g') = Left [CmdAmount n, CmdGotoLine]
+parseInput CommandMode [CmdAmount n, CmdGotoLine] (Curses.EventCharacter 'g') = Right $ matchActions [CmdAmount n, CmdGotoLine]
+
 -- Repeat last modification (dot command)
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '.') = Right $ matchActions [CmdAmount n, CmdRepeat]
 parseInput CommandMode [] (Curses.EventCharacter '.') = Right $ matchActions [CmdRepeat]
@@ -193,10 +212,17 @@ matchActions [CmdUndo] = [ActUndo 1]
 matchActions [CmdAmount 1, CmdJoinLine] = [ActFlagUndoPoint, ActJoinLine 2]
 matchActions [CmdAmount n, CmdJoinLine] = [ActFlagUndoPoint, ActJoinLine n]
 matchActions [CmdJoinLine] = [ActFlagUndoPoint, ActJoinLine 2]
+matchActions [CmdAmount n, CmdFindForward, CmdChar c] = [ActFindForward n c]
+matchActions [CmdFindForward, CmdChar c] = [ActFindForward 1 c]
+matchActions [CmdAmount n, CmdFindBackward, CmdChar c] = [ActFindBackward n c]
+matchActions [CmdFindBackward, CmdChar c] = [ActFindBackward 1 c]
 
 matchActions [CmdAmount n, CmdRedo] = [ActRedo n]
 matchActions [CmdRedo] = [ActRedo 1]
 matchActions [CmdRedrawScreen] = [ActRedrawScreen]
+matchActions [CmdGotoLastLine] = [ActGotoLastLine, ActFirstNoneWhiteSpace]
+matchActions [CmdAmount n, CmdGotoLine] = [ActGotoLine n, ActFirstNoneWhiteSpace]
+matchActions [CmdGotoFirstLine] = [ActGotoLine 0, ActFirstNoneWhiteSpace]
 
 matchActions [CmdAmount n, CmdRepeat] = [ActRepeat n]
 matchActions [CmdRepeat] = [ActRepeat 1]
@@ -213,6 +239,8 @@ isMotion (Right [ActCursorRight _])       = Motion
 isMotion (Right [ActCursorUp _])          = Motion
 isMotion (Right (ActEndOfLine:_))         = Motion
 isMotion (Right [ActFirstNoneWhiteSpace]) = Motion
+isMotion (Right [ActFindForward _ _])     = Motion
+isMotion (Right [ActFindBackward _ _])     = Motion
 isMotion _ = NoMotion
 
 actions :: Either [Command] [Action] -> [Action]

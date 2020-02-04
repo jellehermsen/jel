@@ -105,6 +105,18 @@ changeState state (ActFirstNoneWhiteSpace) = do
     let whiteSpaceLength = Text.length $ Text.takeWhile (\x -> x == ' ' || x == '\t') line
     moveCursor state (0, -((snd cursorPos) - whiteSpaceLength))
 
+changeState state (ActGotoLine n) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let cursorPos = Window.cursorPos window
+    let newPos = Buffer.closestPos buffer (n - 1, 0)
+    moveCursor state $ subPos newPos cursorPos
+
+changeState state (ActGotoLastLine) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let cursorPos = Window.cursorPos window
+    let newPos = Buffer.closestPos buffer (Buffer.lineCount buffer - 1, 0)
+    moveCursor state $ subPos newPos cursorPos
+
 changeState state (ActFlagUndoPoint) = do
     buffer <- getActiveBuffer state
     let newBuffer = Buffer.flagUndoPoint buffer
@@ -256,6 +268,39 @@ changeState state (ActDeleteLine n) = do
     }
 
     let newState = (replaceBuffer state newBuffer) {
+        windows = Map.insert
+            (Window.windowId window)
+            (setScrollPos newWindow)
+            (State.windows state)
+    }
+    return (newState, [])
+
+-- Find forward
+changeState state (ActFindForward n c) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let pos@(row, col) = Window.cursorPos window
+    line <- Buffer.lineForPos buffer pos
+    index <- findNthIndex col n c line
+    let newPos = Buffer.closestPos buffer (row, col + index + 1)
+    let newWindow = window {Window.cursorPos = newPos}
+    let newState = state {
+        windows = Map.insert
+            (Window.windowId window)
+            (setScrollPos newWindow)
+            (State.windows state)
+    }
+    return (newState, [])
+
+
+-- Find backward
+changeState state (ActFindBackward n c) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let pos@(row, col) = Window.cursorPos window
+    line <- Buffer.lineForPos buffer pos
+    index <- findNthIndex (Text.length line - col - 1) n c (Text.reverse line)
+    let newPos = Buffer.closestPos buffer (row, col - index - 1)
+    let newWindow = window {Window.cursorPos = newPos}
+    let newState = state {
         windows = Map.insert
             (Window.windowId window)
             (setScrollPos newWindow)

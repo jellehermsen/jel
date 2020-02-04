@@ -167,6 +167,7 @@ deleteText buffer pos n updateHistory = do
 
 deleteSection :: Buffer -> Position -> Position -> Maybe (Buffer, Text.Text)
 deleteSection buffer pos1 pos2
+    | pos1 == pos2 = Just (buffer, "")
     | fromRow == toRow = deleteText buffer fromPos (toCol - fromCol + 1) True
     | toRow == fromRow + 1 =
         return (buffer, "")

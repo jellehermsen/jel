@@ -47,6 +47,9 @@ main = do
         Curses.setKeypad motherCWindow True
         (screenHeight, screenWidth) <- Gui.getWindowSize motherCWindow
 
+        Curses.defineColor (Curses.Color 200) 150 150 150
+        Curses.defineColor (Curses.Color 201) 500 500 500
+
         firstCWindow <- Curses.newWindow (toInteger (screenWidth - 1)) (toInteger screenWidth) 0 0
         let firstBuffer = (Buffer.newBuffer 0){Buffer.bLines = dummyText}
         let firstWindow = Window.newWindow 1 0 firstCWindow (screenHeight - 1, screenWidth)
@@ -59,11 +62,12 @@ main = do
 
 loop :: State.State -> CWindow -> Curses.Curses ()
 loop state motherCWindow = do
-    ev <- Curses.getEvent motherCWindow Nothing
+    ev <- Curses.tryCurses $ Curses.getEvent motherCWindow Nothing
     Helpers.traceMonad ev
     case ev of
-        Nothing -> loop state motherCWindow
-        Just ev' -> do
+        Left ex -> loop state motherCWindow
+        Right Nothing -> loop state motherCWindow
+        Right (Just ev') -> do
             -- Try to parse the input, retrieve a (partial) list of commands
             -- and a list of actions
             let parsedInput = Input.parseInput (State.mode state) (State.command state) ev'
