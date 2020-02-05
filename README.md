@@ -7,6 +7,22 @@ from Vim, and removing stuff that the I don't need.
 NB: This is mostly exploratory programming at the moment and definitely not
 useable.
 
+I want this to become my default editor, supporting the following things:
+- most of the regular VI-commands for moving around and editing
+- vertical splits
+- tabs
+- marks
+- macros
+- visual mode and visual line mode
+- calling shell commands from the editor
+- Xmonad style customization
+
+There's also some things I won't add, or only when other people request them.
+For example I'm not too fond of regex integration in Vi and Vim. It most often
+leads to having to escape a lot of characters trying to do simple search and
+replace operations. Whenever I need to do more complex stuff I mostly use
+macros and not regex, so I intend to skip regex integration altogether.
+
 Requirements
 ------------
 Right now, this project builds on Linux. Most of the BSDs or other "posixy"
@@ -90,17 +106,13 @@ can find in **StateChange.hs**. Besides returning a changed state record, it
 also gives you a list of events. These events can be regarded as side effects
 for the screen or the disk, that have not been executed yet. This list of
 events is folded over the state record using the *handleEvent* function you can
-find in **Event.hs**. These events encompass everything from saving the file to
-disk to moving the cursor or changing some text.
+find in **Event.hs**.
 
 If you look at the design linearly you see that I've tried to seperate the
 editor in a couple of different layers. The first layer are the commands you
 enter. These can be gradually build up, like you're used to in VI. When a
-command is completely built it can result in an action. There's a large variety
-of actions, but eventually they all boil down to only a couple of actual
-events. So for example there's an action for moving the cursor a page down, or
-to the first none whitespace character, but when translated into an event
-there's only one "move the cursor" event.
+command is completely built it can result in a list of actions. These actions
+are handled and might result some events like writing to disk.
 
 By making this layered separation I hope that I'll be able to define all the
 functionality in a pretty straightforward fashion, without too much
