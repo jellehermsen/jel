@@ -162,6 +162,12 @@ parseInput CommandMode [CmdGotoLine] (Curses.EventCharacter 'g') = Right $ match
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'g') = Left [CmdAmount n, CmdGotoLine]
 parseInput CommandMode [CmdAmount n, CmdGotoLine] (Curses.EventCharacter 'g') = Right $ matchActions [CmdAmount n, CmdGotoLine]
 
+parseInput CommandMode [] (Curses.EventCharacter 'w') = Right $ matchActions [CmdNextWord]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'w') = Right $ matchActions [CmdAmount n, CmdNextWord]
+
+parseInput CommandMode [] (Curses.EventCharacter 'b') = Right $ matchActions [CmdPrevWord]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'b') = Right $ matchActions [CmdAmount n, CmdPrevWord]
+
 -- Repeat last modification (dot command)
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '.') = Right $ matchActions [CmdAmount n, CmdRepeat]
 parseInput CommandMode [] (Curses.EventCharacter '.') = Right $ matchActions [CmdRepeat]
@@ -228,6 +234,10 @@ matchActions [CmdRedrawScreen] = [ActRedrawScreen]
 matchActions [CmdGotoLastLine] = [ActGotoLastLine, ActFirstNoneWhiteSpace]
 matchActions [CmdAmount n, CmdGotoLine] = [ActGotoLine n, ActFirstNoneWhiteSpace]
 matchActions [CmdGotoFirstLine] = [ActGotoLine 0, ActFirstNoneWhiteSpace]
+matchActions [CmdAmount n, CmdNextWord] = [ActNextWord n]
+matchActions [CmdNextWord] = [ActNextWord 1]
+matchActions [CmdAmount n, CmdPrevWord] = [ActPrevWord n]
+matchActions [CmdPrevWord] = [ActPrevWord 1]
 
 matchActions [CmdReplaceChar n, CmdChar c] = [ActFlagUndoPoint, ActReplaceChar n c]
 

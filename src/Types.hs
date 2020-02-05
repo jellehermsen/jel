@@ -41,6 +41,8 @@ data Command = CmdAmount Int
     | CmdDown
     | CmdEndOfLine
     | CmdFirstNoneWhiteSpace
+    | CmdNextWord
+    | CmdPrevWord
     | CmdInsertChar Char
     | CmdInsertMode
     | CmdInsertModeBefore
@@ -100,6 +102,8 @@ data Action = ActIdle
     | ActGotoLine Int
     | ActGotoLastLine
     | ActReplaceChar Int Char
+    | ActNextWord Int
+    | ActPrevWord Int
 
 -- All the events, which resemble disk operations or GUI changes
 data Event = EvIdle

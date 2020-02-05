@@ -19,6 +19,7 @@ module Helpers where
 
 import qualified Debug.Trace as Debug
 import qualified Data.Text as Text
+import Data.Char (isAlphaNum)
 import System.IO.Unsafe as Unsafe
 import Types
 
@@ -102,3 +103,22 @@ split3 len1 len2 t = (first, removed, second)
 
 add :: Int -> Int -> Int
 add a b = a + b
+
+-- letters, digits, _, international letters
+isWordSeparator :: Char -> Bool
+isWordSeparator c = not (isAlphaNum c || c == '_')
+
+nextWordIndex :: Text.Text -> Int
+nextWordIndex t
+    | Text.length separation == 0 = 0
+    | otherwise = Text.length firstWord + Text.length separation
+    where
+        (firstWord, t2)  = Text.span (not . isWordSeparator) t
+        (separation, t3) = Text.span isWordSeparator t2
+
+prevWordIndex :: Text.Text -> Int
+prevWordIndex t = Text.length firstWord + Text.length separation + Text.length beginning
+    where
+        (separation, t2) = Text.span isWordSeparator $ Text.reverse t
+        (firstWord, t3)  = Text.span (not . isWordSeparator) t2
+        (beginning, _) = Text.span (not . isWordSeparator) t3

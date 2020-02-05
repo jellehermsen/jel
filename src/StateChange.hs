@@ -17,7 +17,7 @@
 
 module StateChange where
 
-import Control.Monad (foldM)
+import Control.Monad (foldM, guard)
 import Data.Maybe (isNothing)
 import qualified Debug.Trace as Debug
 import qualified Data.Map.Strict as Map
@@ -110,6 +110,38 @@ changeState state (ActGotoLastLine) = do
     let cursorPos = Window.cursorPos window
     let newPos = Buffer.closestPos buffer (Buffer.lineCount buffer - 1, 0)
     moveCursor state $ subPos newPos cursorPos
+
+changeState state (ActNextWord 0) = Just (state, [])
+changeState state (ActNextWord n) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let pos@(row, col) = Window.cursorPos window
+    line <- Buffer.lineForPos buffer pos
+    let ind = nextWordIndex $ Text.drop (col + 1) line
+    guard (ind /= 0 || Buffer.lineCount buffer > row + 1)
+    if ind == 0
+        then do
+            (newState, _) <- foldMotions (Just (state, []))
+                [ActCursorDown 1, ActFirstNoneWhiteSpace]
+            changeState newState $ ActNextWord $ n - 1
+        else do
+             (newState, _) <- moveCursor state (0, ind + 1)
+             changeState newState $ ActNextWord $ n - 1
+
+changeState state (ActPrevWord 0) = Just (state, [])
+changeState state (ActPrevWord n) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let pos@(row, col) = Window.cursorPos window
+    line <- Buffer.lineForPos buffer pos
+    let ind = prevWordIndex $ Text.take (col - 1) line
+    guard (ind /= 0 || row > 0)
+    if ind == 0
+        then do
+            (newState, _) <- foldMotions (Just (state, []))
+                [ActCursorUp 1, ActEndOfLine]
+            changeState newState $ ActPrevWord $ n
+        else do
+             (newState, _) <- moveCursor state (0, -ind - 1)
+             changeState newState $ ActPrevWord $ n - 1
 
 changeState state (ActFlagUndoPoint) = do
     buffer <- getActiveBuffer state
