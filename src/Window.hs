@@ -59,3 +59,4 @@ viewPort w = (fromRow, fromCol, toRow, toCol)
         (height, width) = size w
         toRow = fromRow + height - 1
         toCol = fromCol + width - 1
+

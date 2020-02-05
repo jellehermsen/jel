@@ -116,3 +116,14 @@ setScrollPos w = if inWindow
         inWindow = posInRange (Window.cursorPos w) viewPort
         diff = posDiff (Window.cursorPos w) viewPort
         newScrollPos = addV2 (Window.scrollPos w) diff
+
+setCursorPos :: State -> Window.Window -> Position -> State
+setCursorPos state window pos =
+    state {
+        windows = Map.insert
+            (Window.windowId window)
+            (setScrollPos newWindow)
+            (State.windows state)
+    }
+    where
+        newWindow = window {Window.cursorPos = pos}

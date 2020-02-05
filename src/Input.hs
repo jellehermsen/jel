@@ -128,15 +128,20 @@ parseInput CommandMode [] (Curses.EventCharacter 'a') = Right $ matchActions [Cm
 parseInput CommandMode _ (Curses.EventCharacter '\ESC') = Left []
 parseInput InsertMode [] (Curses.EventCharacter '\ESC') = Right $ matchActions [CmdCommandMode]
 
+-- Replace single character
+parseInput CommandMode [] (Curses.EventCharacter 'r') = Left [CmdReplaceChar 1]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'r') = Left [CmdReplaceChar n]
+parseInput CommandMode [CmdReplaceChar n] (Curses.EventCharacter c)
+    | isPrint c = Right $ matchActions [CmdReplaceChar n, CmdChar c]
+    | otherwise = Left []
+
 -- Insert newline
 parseInput InsertMode [] (Curses.EventCharacter '\n') = Right $ matchActions [CmdInsertNewLine]
 
 -- Insert character
-parseInput InsertMode [] (Curses.EventCharacter c) = if isPrint c
-    then
-        Right $ matchActions [CmdInsertChar c]
-    else
-        Left []
+parseInput InsertMode [] (Curses.EventCharacter c)
+    | isPrint c = Right $ matchActions [CmdInsertChar c]
+    | otherwise = Left []
 
 -- Join lines
 parseInput CommandMode [] (Curses.EventCharacter 'J') = Right $ matchActions [CmdJoinLine]
@@ -224,6 +229,8 @@ matchActions [CmdGotoLastLine] = [ActGotoLastLine, ActFirstNoneWhiteSpace]
 matchActions [CmdAmount n, CmdGotoLine] = [ActGotoLine n, ActFirstNoneWhiteSpace]
 matchActions [CmdGotoFirstLine] = [ActGotoLine 0, ActFirstNoneWhiteSpace]
 
+matchActions [CmdReplaceChar n, CmdChar c] = [ActFlagUndoPoint, ActReplaceChar n c]
+
 matchActions [CmdAmount n, CmdRepeat] = [ActRepeat n]
 matchActions [CmdRepeat] = [ActRepeat 1]
 
@@ -240,7 +247,9 @@ isMotion (Right [ActCursorUp _])          = Motion
 isMotion (Right (ActEndOfLine:_))         = Motion
 isMotion (Right [ActFirstNoneWhiteSpace]) = Motion
 isMotion (Right [ActFindForward _ _])     = Motion
-isMotion (Right [ActFindBackward _ _])     = Motion
+isMotion (Right [ActFindBackward _ _])    = Motion
+isMotion (Right (ActGotoLine n:_))        = Motion
+isMotion (Right (ActGotoLastLine:_))      = Motion
 isMotion _ = NoMotion
 
 actions :: Either [Command] [Action] -> [Action]
