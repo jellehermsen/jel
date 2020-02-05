@@ -37,6 +37,7 @@ data Command = CmdAmount Int
     | CmdCommandMode
     | CmdDelete Int
     | CmdDeleteChar
+    | CmdDeleteCharBefore
     | CmdDeleteLine Int
     | CmdDown
     | CmdEndOfLine
@@ -79,6 +80,7 @@ data Action = ActIdle
     | ActCursorRight Int
     | ActCursorUp Int
     | ActDeleteChar Int
+    | ActDeleteCharBefore Int
     | ActDelete Int [Action]
     | ActDeleteLine Int
     | ActEndOfLine

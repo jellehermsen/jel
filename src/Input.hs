@@ -88,20 +88,8 @@ parseInput CommandMode [CmdFindBackward] (Curses.EventCharacter c) = Right $ mat
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'x') = Right $ matchActions [CmdAmount n, CmdDeleteChar]
 parseInput CommandMode [] (Curses.EventCharacter 'x') = Right $ matchActions [CmdDeleteChar]
 
--- Delete sections
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'd') = Left [CmdDelete n]
-parseInput CommandMode [] (Curses.EventCharacter 'd') = Left [CmdDelete 1]
-parseInput CommandMode [CmdDelete n] (Curses.EventCharacter 'd') = Right $ matchActions [CmdDeleteLine n]
-
-parseInput CommandMode ((CmdDelete n):xs) (eChar) =
-    case (isMotion possibleMotion) of
-        NoMotion      -> Right $ [ActErrorMessage "Invalid motion"]
-        CouldBeMotion -> Left $ ((CmdDelete n):motionCommands)
-        Motion        -> Right $ [ActFlagUndoPoint, ActDelete n motionActions]
-    where
-        possibleMotion = parseInput CommandMode xs eChar
-        motionActions = actions possibleMotion
-        motionCommands = commands possibleMotion
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'X') = Right $ matchActions [CmdAmount n, CmdDeleteCharBefore]
+parseInput CommandMode [] (Curses.EventCharacter 'X') = Right $ matchActions [CmdDeleteCharBefore]
 
 -- Open new line
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'o') = Right $ matchActions [CmdAmount n, CmdOpenLine]
@@ -175,10 +163,23 @@ parseInput CommandMode [] (Curses.EventCharacter '.') = Right $ matchActions [Cm
 -- Quit on ctrl-q
 parseInput mode cmds (Curses.EventCharacter '\DC1') = Right [ActQuit]
 
+-- Delete sections
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'd') = Left [CmdDelete n]
+parseInput CommandMode [] (Curses.EventCharacter 'd') = Left [CmdDelete 1]
+parseInput CommandMode [CmdDelete n] (Curses.EventCharacter 'd') = Right $ matchActions [CmdDeleteLine n]
+
+parseInput CommandMode ((CmdDelete n):xs) (eChar) =
+    case (isMotion possibleMotion) of
+        NoMotion      -> Right $ [ActErrorMessage "Invalid motion"]
+        CouldBeMotion -> Left $ ((CmdDelete n):motionCommands)
+        Motion        -> Right $ [ActFlagUndoPoint, ActDelete n motionActions]
+    where
+        possibleMotion = parseInput CommandMode xs eChar
+        motionActions = actions possibleMotion
+        motionCommands = commands possibleMotion
+
+
 parseInput _ _ _ = Left []
-
-
-
 
 -- Map a list of commands to a list of actions
 matchActions :: [Command] -> [Action]
@@ -212,6 +213,8 @@ matchActions [CmdCommandMode] = [ActCommandMode]
 matchActions [CmdInsertChar c] = [ActInsertChar c]
 matchActions [CmdAmount n, CmdDeleteChar] = [ActFlagUndoPoint, ActDeleteChar n]
 matchActions [CmdDeleteChar] = [ActFlagUndoPoint, ActDeleteChar 1]
+matchActions [CmdAmount n, CmdDeleteCharBefore] = [ActFlagUndoPoint, ActDeleteCharBefore n]
+matchActions [CmdDeleteCharBefore] = [ActFlagUndoPoint, ActDeleteCharBefore 1]
 matchActions [CmdDeleteLine n] = [ActFlagUndoPoint, ActDeleteLine n]
 matchActions [CmdInsertNewLine] = [ActInsertNewLine, ActCursorDown 1, ActFirstNoneWhiteSpace]
 matchActions [CmdAmount n, CmdOpenLine] = matchActions [CmdOpenLine]
@@ -258,6 +261,8 @@ isMotion (Right (ActEndOfLine:_))         = Motion
 isMotion (Right [ActFirstNoneWhiteSpace]) = Motion
 isMotion (Right [ActFindForward _ _])     = Motion
 isMotion (Right [ActFindBackward _ _])    = Motion
+isMotion (Right [ActNextWord n])          = Motion
+isMotion (Right [ActPrevWord n])          = Motion
 isMotion (Right (ActGotoLine n:_))        = Motion
 isMotion (Right (ActGotoLastLine:_))      = Motion
 isMotion _ = NoMotion
