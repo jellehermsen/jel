@@ -116,7 +116,7 @@ changeState state (ActNextWord n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let pos@(row, col) = Window.cursorPos window
     line <- Buffer.lineForPos buffer pos
-    let ind = nextWordIndex $ Text.drop (col + 1) line
+    let ind = nextWordIndex $ Text.drop col line
     guard (ind /= 0 || Buffer.lineCount buffer > row + 1)
     if ind == 0
         then do
@@ -124,23 +124,38 @@ changeState state (ActNextWord n) = do
                 [ActCursorDown 1, ActFirstNoneWhiteSpace]
             changeState newState $ ActNextWord $ n - 1
         else do
-             (newState, _) <- moveCursor state (0, ind + 1)
+             (newState, _) <- moveCursor state (0, ind)
              changeState newState $ ActNextWord $ n - 1
 
+-- The ActPrevWord situation is a bit longer than I would like, but I have to
+-- do some additional checks when moving up one row. You either have to move one
+-- extra word to the left, or not, depending on whether you landed on a word of 1
+-- character or more.
 changeState state (ActPrevWord 0) = Just (state, [])
 changeState state (ActPrevWord n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let pos@(row, col) = Window.cursorPos window
     line <- Buffer.lineForPos buffer pos
-    let ind = prevWordIndex $ Text.take (col - 1) line
+    let ind = prevWordIndex $ Text.take col line
     guard (ind /= 0 || row > 0)
     if ind == 0
         then do
             (newState, _) <- foldMotions (Just (state, []))
                 [ActCursorUp 1, ActEndOfLine]
-            changeState newState $ ActPrevWord $ n
+            (window2, buffer2) <- getActiveWindowAndBuffer newState
+            let pos2 = Window.cursorPos window2
+            line2 <- Buffer.lineForPos buffer2 pos2
+            if Text.length line2 > 1
+                then do
+                    let c1 = Text.index line2 $ Text.length line2 - 1
+                    let c2 = Text.index line2 $ Text.length line2 - 2
+                    if (isWordSeparator c1 == isWordSeparator c2)
+                        then changeState newState $ ActPrevWord $ n
+                        else changeState newState $ ActPrevWord $ n - 1
+                else
+                    changeState newState $ ActPrevWord $ n - 1
         else do
-             (newState, _) <- moveCursor state (0, -ind - 1)
+             (newState, _) <- moveCursor state (0, -ind)
              changeState newState $ ActPrevWord $ n - 1
 
 changeState state (ActFlagUndoPoint) = do
@@ -311,3 +326,9 @@ foldMotions (Just (state, _)) (motion:xs) = do
         Just (state, [])
     else
         foldMotions changedState xs
+
+-- The motions you use when deleting (with 'd') are a bit different from the
+-- regular motions. For example when you do 'dw' it deletes until the end of the
+-- current word and any whitespace after that. This is why we need to transform
+-- the motions received when deleting.
+-- transformDeleteMotions :: [Action] -> [Action]

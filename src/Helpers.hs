@@ -19,7 +19,7 @@ module Helpers where
 
 import qualified Debug.Trace as Debug
 import qualified Data.Text as Text
-import Data.Char (isAlphaNum)
+import Data.Char (isAlphaNum, isSpace)
 import System.IO.Unsafe as Unsafe
 import Types
 
@@ -110,15 +110,25 @@ isWordSeparator c = not (isAlphaNum c || c == '_')
 
 nextWordIndex :: Text.Text -> Int
 nextWordIndex t
-    | Text.length separation == 0 = 0
-    | otherwise = Text.length firstWord + Text.length separation
+    | movedChars == Text.length t = 0
+    | otherwise                   = movedChars
     where
-        (firstWord, t2)  = Text.span (not . isWordSeparator) t
-        (separation, t3) = Text.span isWordSeparator t2
+        (firstWord, t2)   = Text.span (not . isWordSeparator) t
+        (separation, t3)  = Text.span isWordSeparator t
+        whitespace spaces = Text.length $ Text.takeWhile isSpace spaces
+        movedChars
+            | Text.length firstWord == 0 =
+                Text.length separation + whitespace t3
+            | otherwise = Text.length firstWord + whitespace t2
 
 prevWordIndex :: Text.Text -> Int
-prevWordIndex t = Text.length firstWord + Text.length separation + Text.length beginning
+prevWordIndex t = movedChars
     where
-        (separation, t2) = Text.span isWordSeparator $ Text.reverse t
-        (firstWord, t3)  = Text.span (not . isWordSeparator) t2
-        (beginning, _) = Text.span (not . isWordSeparator) t3
+        (spaces, t1)     = Text.span isSpace $ Text.reverse t
+        (separation, t2) = Text.span isWordSeparator t1
+        (firstWord, t3)  = Text.span (not . isWordSeparator) t1
+        movedChars
+            | Text.length firstWord == 0 =
+                Text.length spaces + Text.length separation
+            | otherwise                  =
+                Text.length spaces + Text.length firstWord
