@@ -22,6 +22,7 @@ import Data.Maybe (isNothing)
 import qualified Debug.Trace as Debug
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
+import Data.Char (isSpace)
 
 import Types
 import Helpers
@@ -158,6 +159,19 @@ changeState state (ActPrevWord n) = do
              (newState, _) <- moveCursor state (0, -ind)
              changeState newState $ ActPrevWord $ n - 1
 
+
+changeState state (ActNextWordEnding 0) = Just (state, [])
+changeState state (ActNextWordEnding n) = do
+    offset <- wordEndOffset state
+    if offset == 0 then do
+        (newState, _) <- changeState state $ ActNextWord 1
+        newOffset <- wordEndOffset newState
+        (movedState, _) <- changeState newState $ (ActCursorRight newOffset)
+        changeState movedState $ ActNextWordEnding $ n - 1
+    else do
+        (movedState, _) <- changeState state $ (ActCursorRight offset)
+        changeState movedState $ ActNextWordEnding $ n - 1
+
 changeState state (ActFlagUndoPoint) = do
     buffer <- getActiveBuffer state
     let newBuffer = Buffer.flagUndoPoint buffer
@@ -245,6 +259,16 @@ changeState state (ActRedo n) = do
 
 -- Delete sections
 changeState state (ActDelete 0 motions) = Just (state, [])
+
+changeState state (ActDelete n [ActNextWord m]) =
+    changeState state (ActDelete n [ActNextWordEnding m])
+
+changeState state (ActDelete n [ActCursorRight m]) =
+    changeState state (ActDeleteChar (n*m))
+
+changeState state (ActDelete n [ActCursorLeft m]) =
+    changeState state (ActDeleteCharBefore (n*m))
+
 changeState state (ActDelete n motions) = do
     oldWindow <- getActiveWindow state
     let fromPos = Window.cursorPos oldWindow
@@ -317,6 +341,23 @@ changeState state ActIdle = Nothing
 changeState state (ActErrorMessage t) = Nothing
 changeState state _ = Just (state, [EvQuit])
 
+-- Helper functions
+
+-- Find out how many columns the cursor needs to move to the right in order to
+-- reach the end of the current word.
+wordEndOffset :: State -> Maybe Int
+wordEndOffset state = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let pos@(row, col) = Window.cursorPos window
+    line <- Buffer.lineForPos buffer pos
+    let text = Text.drop col line
+    let char = Text.head text
+    let len = Text.length $ Text.takeWhile (match char) (Text.tail text)
+    if Text.length text == 0 || len == 0 then Just 0 else Just len
+    where
+        match c1 c2 =
+            isWordSeparator c1 == isWordSeparator c2 && not (isSpace c2)
+
 foldMotions :: ChangedState -> [Action] -> ChangedState
 foldMotions Nothing _ = Nothing
 foldMotions (Just (state, _)) [] = Just (state, [])
@@ -326,9 +367,3 @@ foldMotions (Just (state, _)) (motion:xs) = do
         Just (state, [])
     else
         foldMotions changedState xs
-
--- The motions you use when deleting (with 'd') are a bit different from the
--- regular motions. For example when you do 'dw' it deletes until the end of the
--- current word and any whitespace after that. This is why we need to transform
--- the motions received when deleting.
--- transformDeleteMotions :: [Action] -> [Action]

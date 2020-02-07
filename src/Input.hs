@@ -156,6 +156,15 @@ parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'w') = Right $ match
 parseInput CommandMode [] (Curses.EventCharacter 'b') = Right $ matchActions [CmdPrevWord]
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'b') = Right $ matchActions [CmdAmount n, CmdPrevWord]
 
+parseInput CommandMode [] (Curses.EventCharacter 'B') = Right $ matchActions [CmdPrevWord]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'B') = Right $ matchActions [CmdAmount n, CmdPrevWord]
+
+parseInput CommandMode [] (Curses.EventCharacter 'e') = Right $ matchActions [CmdNextWordEnding]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'e') = Right $ matchActions [CmdAmount n, CmdNextWordEnding]
+
+parseInput CommandMode [] (Curses.EventCharacter 'E') = Right $ matchActions [CmdNextWordEnding]
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'E') = Right $ matchActions [CmdAmount n, CmdNextWordEnding]
+
 -- Repeat last modification (dot command)
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '.') = Right $ matchActions [CmdAmount n, CmdRepeat]
 parseInput CommandMode [] (Curses.EventCharacter '.') = Right $ matchActions [CmdRepeat]
@@ -177,7 +186,6 @@ parseInput CommandMode ((CmdDelete n):xs) (eChar) =
         possibleMotion = parseInput CommandMode xs eChar
         motionActions = actions possibleMotion
         motionCommands = commands possibleMotion
-
 
 parseInput _ _ _ = Left []
 
@@ -241,6 +249,8 @@ matchActions [CmdAmount n, CmdNextWord] = [ActNextWord n]
 matchActions [CmdNextWord] = [ActNextWord 1]
 matchActions [CmdAmount n, CmdPrevWord] = [ActPrevWord n]
 matchActions [CmdPrevWord] = [ActPrevWord 1]
+matchActions [CmdAmount n, CmdNextWordEnding] = [ActNextWordEnding n]
+matchActions [CmdNextWordEnding] = [ActNextWordEnding 1]
 
 matchActions [CmdReplaceChar n, CmdChar c] = [ActFlagUndoPoint, ActReplaceChar n c]
 
@@ -254,6 +264,7 @@ isMotion :: Either [Command] [Action] -> PossibleMotion
 isMotion (Left _) = CouldBeMotion
 isMotion (Right [ActBeginningOfLine])     = Motion
 isMotion (Right [ActCursorDown _])        = Motion
+isMotion (Right ((ActCursorDown _):xs))   = Motion
 isMotion (Right [ActCursorLeft _])        = Motion
 isMotion (Right [ActCursorRight _])       = Motion
 isMotion (Right [ActCursorUp _])          = Motion
@@ -263,6 +274,7 @@ isMotion (Right [ActFindForward _ _])     = Motion
 isMotion (Right [ActFindBackward _ _])    = Motion
 isMotion (Right [ActNextWord n])          = Motion
 isMotion (Right [ActPrevWord n])          = Motion
+isMotion (Right [ActNextWordEnding n])    = Motion
 isMotion (Right (ActGotoLine n:_))        = Motion
 isMotion (Right (ActGotoLastLine:_))      = Motion
 isMotion _ = NoMotion
