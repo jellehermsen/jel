@@ -145,17 +145,20 @@ joinLines buffer pos@(row, _) count updateHistory = do
     }
     return newBuffer
 
+-- Delete n characters on given position. If n == -1 it deletes all the
+-- characters until the end of the line
 deleteText :: Buffer -> Position -> Int -> Bool -> Maybe (Buffer, Text.Text)
-deleteText buffer pos n updateHistory = do
+deleteText buffer pos@(row, col) n updateHistory = do
     line <- lineForPos buffer pos
+    let deleteCount = if n == -1 then Text.length line - col else n
     if Text.length line == 0 then
         Nothing
     else do
-        let (first, removed, second) = split3 (getCol pos) n line
+        let (first, removed, second) = split3 (getCol pos) deleteCount line
         Just (
             buffer {
                 bLines = Sequence.update
-                    (getRow pos)
+                    row
                     (Text.concat [first, second])
                     (bLines buffer)
                 , history = if updateHistory
@@ -166,13 +169,31 @@ deleteText buffer pos n updateHistory = do
             }, removed)
 
 deleteSection :: Buffer -> Position -> Position -> Maybe (Buffer, Text.Text)
-deleteSection buffer pos1 pos2
+deleteSection = deleteSection' ""
+
+deleteSection' :: Text.Text -> Buffer -> Position -> Position -> Maybe (Buffer, Text.Text)
+deleteSection' removed buffer pos1 pos2
     | pos1 == pos2 = Just (buffer, "")
-    | fromRow == toRow = deleteText buffer fromPos (toCol - fromCol + 1) True
-    | toRow == fromRow + 1 =
-        return (buffer, "")
-    | otherwise =
-        return (buffer, "")
+    | fromRow == toRow = do
+        l <- lineForPos buffer fromPos
+
+        -- If this isn't the first removal and text on this line is removed all
+        -- the way to the last column, we remove the entire line instead.
+        if removed == "" || Text.length l > toCol + 1
+            then deleteText buffer fromPos (toCol - fromCol + 1) True
+            else deleteLine buffer fromRow
+    | otherwise = do
+        traceMonad fromCol
+        let deleteline = fromCol == 0
+        (b1, t1) <- if deleteline
+            then
+                deleteLine buffer fromRow
+            else
+                deleteText buffer fromPos (-1) True
+        let newRemoved = Text.intercalate "\n" [removed, t1]
+        let nextFrom = if deleteline then (fromRow, 0) else (fromRow + 1, 0)
+        let nextTo = if deleteline then (toRow - 1, toCol) else toPos
+        deleteSection' newRemoved b1 nextFrom nextTo
     where
         fromPos@(fromRow, fromCol) = smallestPos pos1 pos2
         toPos@(toRow, toCol) = largestPos pos1 pos2

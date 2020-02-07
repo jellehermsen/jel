@@ -269,26 +269,22 @@ changeState state (ActDelete n [ActCursorRight m]) =
 changeState state (ActDelete n [ActCursorLeft m]) =
     changeState state (ActDeleteCharBefore (n*m))
 
+changeState state (ActDelete n [ActCursorDown m]) =
+    changeState state (ActDeleteLine (n*m + 1))
+
+changeState state (ActDelete n [ActCursorUp m]) = do
+    (newState, _) <- changeState state (ActCursorUp m)
+    changeState newState (ActDeleteLine (n*m + 1))
+
 changeState state (ActDelete n motions) = do
     oldWindow <- getActiveWindow state
     let fromPos = Window.cursorPos oldWindow
-
     let motionLen = length motions
-
     (changedState,_) <- foldMotions (Just (state, []))
         $ take (n * motionLen) (cycle motions)
-
     (window, buffer) <- getActiveWindowAndBuffer changedState
     let toPos = Window.cursorPos window
-
-    (newBuffer, removedText) <- 
-        if (getRow fromPos == getRow toPos) then 
-            Buffer.deleteSection buffer fromPos toPos
-        else
-            -- TODO you're not always deleting entire lines when deleting
-            -- seperate rows
-            Buffer.deleteLines buffer (getRow fromPos) (getRow toPos)
-
+    (newBuffer, removedText) <- Buffer.deleteSection buffer fromPos toPos
     let newPos = Buffer.closestPos newBuffer (smallestPos toPos fromPos)
     return (State.setCursorPos (replaceBuffer state newBuffer) window newPos, [])
 
