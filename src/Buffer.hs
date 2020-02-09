@@ -32,6 +32,8 @@ type Marks = Map.Map Text.Text Types.Position
 type BufferId = Id
 type Indentation = Int
 
+-- |'PastEvent' is used to record previous mutations of a buffer so we can
+-- undo/redo them.
 data PastEvent = UndoFlag
     | InsertText Types.Position Text.Text
     | DeleteText Types.Position Text.Text
@@ -63,6 +65,7 @@ newBuffer bufferId = Buffer
 -- ==========================
 -- = Small helper functions =
 -- ==========================
+
 lineCount :: Buffer -> Int
 lineCount buffer =  Sequence.length $ bLines buffer
 
@@ -95,6 +98,7 @@ getLineRange buffer from count
 -- =====================
 -- = Buffer operations =
 -- =====================
+
 insertText :: Buffer -> Position -> Text.Text -> Bool -> Maybe Buffer
 insertText buffer pos text updateHistory = do
     line <- lineForPos buffer pos
@@ -112,6 +116,8 @@ insertText buffer pos text updateHistory = do
 insertChar :: Buffer -> Position -> Char -> Bool -> Maybe Buffer
 insertChar buffer pos c = insertText buffer pos (Text.singleton c)
 
+-- |Split a line into two different lines at the given position. Everything
+-- right to the split point is inserted as a new line below the given one.
 splitLine :: Buffer -> Position -> Bool -> Maybe Buffer
 splitLine buffer pos updateHistory = do
     let row = getRow pos
@@ -129,6 +135,8 @@ splitLine buffer pos updateHistory = do
                 history buffer
     }
 
+-- |Make a number of lines starting from a given position and a row count into
+-- one big line, intercalating them with a single "space".
 joinLines :: Buffer -> Position -> Int -> Bool -> Maybe Buffer
 joinLines buffer pos@(row, _) count updateHistory = do
     selection <- getLineRange buffer row count
@@ -145,8 +153,8 @@ joinLines buffer pos@(row, _) count updateHistory = do
     }
     return newBuffer
 
--- Delete n characters on given position. If n == -1 it deletes all the
--- characters until the end of the line
+-- |Delete n characters on given position. If n == -1 it deletes all the
+-- characters until the end of the line.
 deleteText :: Buffer -> Position -> Int -> Bool -> Maybe (Buffer, Text.Text)
 deleteText buffer pos@(row, col) n updateHistory = do
     line <- lineForPos buffer pos
@@ -168,6 +176,7 @@ deleteText buffer pos@(row, col) n updateHistory = do
                         history buffer
             }, removed)
 
+-- |Delete a section inside a buffer including the two positions.
 deleteSection :: Buffer -> Position -> Position -> Maybe (Buffer, Text.Text)
 deleteSection = deleteSection' ""
 
@@ -231,12 +240,19 @@ deleteLines' (Just (buffer, texts)) (x:xs) = do
 -- ===============
 -- = Undo / Redo =
 -- ===============
+
+-- |Decrease the current undo depth. This is used after doing an "redo"
+-- operation.
 decUndoDepth :: Buffer -> Buffer
 decUndoDepth buffer = buffer {undoDepth = undoDepth buffer - 1}
 
+-- |Increase the current undo depth. This is used after doing an "undo"
+-- operation.
 incUndoDepth :: Buffer -> Buffer
 incUndoDepth buffer = buffer {undoDepth = undoDepth buffer + 1}
 
+-- |'redo' reverses a number of PastEvents of the buffer, updating the
+-- undoDepth in the process.
 redo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
 redo 0 pos buffer = Just (buffer, pos)
 redo count pos buffer = do
@@ -277,9 +293,9 @@ redoStep (SplitLine pos@(row, col):xs) (Just (buffer, newPos)) = do
     newBuffer <- splitLine buffer pos False
     redoStep xs (Just (decUndoDepth newBuffer, (row + 1, col)))
 
--- undo is called with the amount of "undos", for example 10 when you do 10u
+-- |'undo' is called with the amount of "undos", for example 10 when you do 10u
 -- a cursor position and a buffer and it returns a tuple with the new buffer,
--- the new cursor position, or Nothing
+-- the new cursor position, or Nothing.
 undo :: Int -> Position -> Buffer -> Maybe (Buffer, Position)
 undo 0 pos buffer = Just (buffer, pos)
 undo count pos buffer = do
@@ -331,6 +347,9 @@ undoStep (SplitLine pos@(row, col):xs) (Just (buffer, newPos)) = do
 -- ===========
 -- = History =
 -- ===========
+
+-- |Add a new undo flag to the Buffer's history. Whenever you undo something,
+-- all the events up to an undo point are undone.
 flagUndoPoint :: Buffer -> Buffer
 flagUndoPoint buffer = if hasHistory && lastEvent /= UndoFlag
     then
@@ -344,7 +363,7 @@ flagUndoPoint buffer = if hasHistory && lastEvent /= UndoFlag
         depth = undoDepth buffer
         lastEvent = head $ history buffer
 
--- Tries to merge the last two PastEvents. This helps keep the Buffer history
+-- |Tries to merge the last two PastEvents. This helps keep the Buffer history
 -- small.
 compressHistory :: [PastEvent] -> [PastEvent]
 compressHistory [] = []

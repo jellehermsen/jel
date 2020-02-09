@@ -32,7 +32,7 @@ getWindowSize w = Curses.updateWindow w $ do
     (height, width) <- Curses.windowSize
     return (fromInteger height, fromInteger width)
 
--- Prepare a line for drawing
+-- |Prepare a line for drawing, appending spaces if necessary
 prepLine :: Int -> Int -> Text.Text -> Text.Text
 prepLine from width line = if (Text.length newLine) > width
     then
@@ -58,11 +58,11 @@ drawTextAt row col (windowHeight, windowWidth) text = do
 resetCursor :: Window.Window -> Curses.Update ()
 resetCursor window = Curses.moveCursor (toInteger row) (toInteger col)
     where
-        cursorPos = Window.getRelativeCursorPos window
+        cursorPos = Window.relativeCursorPos window
         col = snd cursorPos
         row = fst cursorPos
 
--- This function is only an early sketch. It simply redraws the entire window,
+-- |This function is only an early sketch. It simply redraws the entire window,
 -- however NCurses takes care of preventing redraws, so at least that's
 -- something :-)
 renderAll :: State.State -> Curses.Curses ()

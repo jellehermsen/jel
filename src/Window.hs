@@ -49,8 +49,10 @@ newWindow windowId bufferId cWindow size = Window
     , cWindow = cWindow
     }
 
-getRelativeCursorPos :: Window -> Types.Position
-getRelativeCursorPos w = subV2 (cursorPos w) (scrollPos w)
+-- |Get the document cursor position relative to the scroll position. Used for
+-- making the GUI
+relativeCursorPos :: Window -> Types.Position
+relativeCursorPos w = subV2 (cursorPos w) (scrollPos w)
 
 viewPort :: Window -> V4
 viewPort w = (fromRow, fromCol, toRow, toCol)

@@ -23,6 +23,9 @@ import Types
 
 data PossibleMotion = CouldBeMotion | NoMotion | Motion
 
+-- |Given the current mode, previous commands and a NCurses event, this
+-- function generates either a new list of commands for the next time, or a list
+-- of actions that can be processed
 parseInput :: Mode -> [Command] -> Curses.Event -> Either [Command] [Action]
 
 -- Numbers
@@ -260,6 +263,8 @@ matchActions [CmdRepeat] = [ActRepeat 1]
 matchActions [CmdAppend] = [ActAdvanceCursor, ActInsertMode]
 matchActions _ = [ActIdle]
 
+-- |Check whether the input resembles (a part of) a motion. This is used when
+-- pairing deletes, yanks or changes with motions
 isMotion :: Either [Command] [Action] -> PossibleMotion
 isMotion (Left _) = CouldBeMotion
 isMotion (Right [ActBeginningOfLine])     = Motion
