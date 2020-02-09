@@ -73,6 +73,8 @@ insertChar pos c t =
     in
        Text.concat [fst splitted, Text.singleton c, snd splitted]
 
+-- |'findNthIndex' finds the first occurence of the given character after the
+-- given column and amount of hits to skip
 findNthIndex :: Int -> Int -> Char -> Text.Text -> Maybe Int
 findNthIndex = findNthIndex' 0
 
@@ -93,7 +95,7 @@ trace = Debug.trace
 traceShow :: Show a => a -> b -> b
 traceShow = Debug.traceShow
 
--- Split text in 3 parts given the length of the first part, and the length of
+-- |Split text in 3 parts given the length of the first part, and the length of
 -- the second
 split3 :: Int -> Int -> Text.Text -> (Text.Text, Text.Text, Text.Text)
 split3 len1 len2 t = (first, removed, second)
@@ -101,10 +103,8 @@ split3 len1 len2 t = (first, removed, second)
         (first, tail) = Text.splitAt len1 t
         (removed, second) = Text.splitAt len2 tail
 
-add :: Int -> Int -> Int
-add a b = a + b
-
--- letters, digits, _, international letters
+-- |'isWordSeperator' checks whether the given character is a letter, digit or
+-- underscore, this takes UTF-8 letters into account
 isWordSeparator :: Char -> Bool
 isWordSeparator c = not (isAlphaNum c || c == '_')
 

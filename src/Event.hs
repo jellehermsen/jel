@@ -28,6 +28,9 @@ import qualified Window
 
 import Helpers
 
+-- |'handleEvent' is used for side effects after processing commands and
+-- actions. This function can for example read or write from disk or quit the
+-- program.
 handleEvent :: Curses.Window -> State.State -> Event -> Curses.Curses (State.State)
 
 handleEvent _ state EvQuit = liftIO exitSuccess

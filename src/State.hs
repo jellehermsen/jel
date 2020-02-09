@@ -104,7 +104,6 @@ replaceBuffer state buffer = state {
     buffers = Map.insert (Buffer.bufferId buffer) buffer (buffers state)
 }
 
--- Set the scroll position in a window
 setScrollPos :: Window.Window -> Window.Window
 setScrollPos w = if inWindow 
     then 

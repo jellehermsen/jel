@@ -43,7 +43,7 @@ moveCursor state dPos = do
         else do
             Nothing
 
--- Advances the cursor by one character, possibly putting it in a position
+-- |Advances the cursor by one character, possibly putting it in a position
 -- beyond what the current line length should allow. This is necessary, otherwise
 -- you couldn't append to a line, or start typing on a previously empty line.
 advanceCursor :: State -> ChangedState
@@ -53,6 +53,8 @@ advanceCursor state = do
     let newState = State.setCursorPos state window $ addPos pos (0, 1)
     Just (newState, [])
 
+-- |Given a state and an action, this function does all the necessary changes
+-- and gives you a new state and a list of events that bubbled up.
 changeState :: State -> Action -> ChangedState
 
 -- Move cursor down
@@ -339,7 +341,7 @@ changeState state _ = Just (state, [EvQuit])
 
 -- Helper functions
 
--- Find out how many columns the cursor needs to move to the right in order to
+-- |Find out how many columns the cursor needs to move to the right in order to
 -- reach the end of the current word.
 wordEndOffset :: State -> Maybe Int
 wordEndOffset state = do
@@ -354,6 +356,7 @@ wordEndOffset state = do
         match c1 c2 =
             isWordSeparator c1 == isWordSeparator c2 && not (isSpace c2)
 
+-- |Fold a bunch of actions resembling motions over a given ChangedState
 foldMotions :: ChangedState -> [Action] -> ChangedState
 foldMotions Nothing _ = Nothing
 foldMotions (Just (state, _)) [] = Just (state, [])

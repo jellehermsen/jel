@@ -72,7 +72,6 @@ data Command = CmdAmount Int
     | CmdGotoFirstLine
     | CmdReplaceChar Int
 
--- All the possible actions in the editor
 data Action = ActIdle
     | ActBeginningOfLine
     | ActCommandMode
@@ -109,7 +108,7 @@ data Action = ActIdle
     | ActPrevWord Int
     | ActNextWordEnding Int
 
--- All the events, which resemble disk operations or GUI changes
+-- |All the events, which resemble disk operations or GUI changes
 data Event = EvIdle
     | EvOpenFile
     | EvSaveFile
