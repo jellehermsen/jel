@@ -10,6 +10,8 @@ category:            Text
 build-type:          Simple
 extra-source-files:  ChangeLog.md, README.md
 cabal-version:       >=1.10
+data-dir:            testdata
+data-files:          test.txt
 
 executable jel
     main-is:             Main.hs

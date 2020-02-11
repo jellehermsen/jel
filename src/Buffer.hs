@@ -210,15 +210,19 @@ deleteSection' removed buffer pos1 pos2
 deleteLine :: Buffer -> Int -> Maybe (Buffer, Text.Text)
 deleteLine buffer row = do
     text <- lineForPos buffer (row, 0)
-    let newLines = if lineCount buffer == 1
-        then
-            Sequence.fromList [""]
-        else
-            Sequence.deleteAt row (bLines buffer)
+    let (newLines, newHistory) = if lineCount buffer == 1
+        then (
+                Sequence.fromList [""],
+                (InsertLine 0 "") : (DeleteLine row text) : history buffer
+            )
+        else (
+                Sequence.deleteAt row (bLines buffer),
+                (DeleteLine row text) : history buffer
+            )
 
     Just (buffer {
             bLines = newLines,
-            history = (DeleteLine row text) :  history buffer
+            history = newHistory
         }, text)
 
 deleteLines :: Buffer -> Int -> Int -> Maybe (Buffer, Text.Text)

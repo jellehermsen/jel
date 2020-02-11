@@ -17,10 +17,17 @@
 
 module Main where
 
+import Prelude hiding (readFile, lines)
+
 import Control.Monad (foldM)
 import qualified UI.NCurses as Curses
 import qualified Data.Sequence as Sequence
 import System.Environment (setEnv)
+
+-- Imports for testing
+import Data.Text.IO (readFile)
+import Data.Text (lines, unpack)
+import Paths_jel
 
 import Types
 import qualified Buffer
@@ -37,6 +44,9 @@ dummyText = Sequence.fromList ["Lorem ipsum dolor sit amet, consectetur adipisci
 main :: IO ()
 main = do
     setEnv "ESCDELAY" "0"
+    filepath <- getDataFileName $ unpack "test.txt"
+    contents <- readFile filepath
+    let testText = Sequence.fromList $ lines contents
     Curses.runCurses $ do
         Curses.setEcho False
         Curses.setRaw True
@@ -51,7 +61,7 @@ main = do
         Curses.defineColor (Curses.Color 201) 500 500 500
 
         firstCWindow <- Curses.newWindow (toInteger (screenWidth - 1)) (toInteger screenWidth) 0 0
-        let firstBuffer = (Buffer.newBuffer 0){Buffer.bLines = dummyText}
+        let firstBuffer = (Buffer.newBuffer 0){Buffer.bLines = testText}
         let firstWindow = Window.newWindow 1 0 firstCWindow (screenHeight - 1, screenWidth)
         lastLineCWindow <- Curses.newWindow 1 (toInteger screenHeight) (toInteger (screenWidth - 1)) 0
 
