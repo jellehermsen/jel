@@ -174,7 +174,22 @@ tests = [
             \state -> do
                 window <- State.getActiveWindow state
                 guard (Window.cursorPos window == (1,4))
-                traceMonad "UGH"
+                return state
+        ),
+        (
+            "Move to the next word: w",
+            unp "w",
+            \state -> do
+                window <- State.getActiveWindow state
+                guard (Window.cursorPos window == (0,6))
+                return state
+        ),
+        (
+            "Move to the 10th word: 10w",
+            unp "10w",
+            \state -> do
+                window <- State.getActiveWindow state
+                guard (Window.cursorPos window == (0,62))
                 return state
         ),
         (
@@ -418,8 +433,17 @@ tests = [
                 return state
         ),
         (
-            "Delete all and undo: 1000dduru",
+            "Delete all and undo, redo, undo: 1000dduru",
             unp "1000dduru",
+            \state -> do
+                (window, buffer) <- State.getActiveWindowAndBuffer state
+                guard (Window.cursorPos window == (0,0))
+                guard $ Buffer.lineCount buffer == 106
+                return state
+        ),
+        (
+            "Join all lines and undo, redo, undo: 1000Juru",
+            unp "1000Juru",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
                 guard (Window.cursorPos window == (0,0))
