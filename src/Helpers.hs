@@ -89,8 +89,8 @@ findNthIndex' total col n c text = do
 traceMonad :: (Show a, Monad m) => a -> m a
 traceMonad x = Debug.trace (show x) (return x)
 
-trace :: String -> a -> a
-trace = Debug.trace
+trace :: Text.Text -> a -> a
+trace = Debug.trace . Text.unpack
 
 traceShow :: Show a => a -> b -> b
 traceShow = Debug.traceShow
@@ -103,32 +103,34 @@ split3 len1 len2 t = (first, removed, second)
         (first, tail) = Text.splitAt len1 t
         (removed, second) = Text.splitAt len2 tail
 
--- |'isWordSeperator' checks whether the given character is a letter, digit or
+-- |'isWordSeparator' checks whether the given character is not a letter, digit or
 -- underscore, this takes UTF-8 letters into account
 isWordSeparator :: Char -> Bool
-isWordSeparator c = not (isAlphaNum c || c == '_')
+isWordSeparator c = isAlphaNum c || c == '_'
 
 nextWordIndex :: Text.Text -> Int
 nextWordIndex t
-    | movedChars == Text.length t = 0
-    | otherwise                   = movedChars
+    | Text.length t == 0 = 0
+    | Text.head t == ' ' = if (spaces t == Text.length t) then 0 else (spaces t + 1)
+    | otherwise          = if (total == Text.length t) then 0 else total
     where
-        (firstWord, t2)   = Text.span (not . isWordSeparator) t
-        (separation, t3)  = Text.span isWordSeparator t
-        whitespace spaces = Text.length $ Text.takeWhile isSpace spaces
-        movedChars
-            | Text.length firstWord == 0 =
-                Text.length separation + whitespace t3
-            | otherwise = Text.length firstWord + whitespace t2
+        spaces wsp      = Text.length $ Text.takeWhile isSpace wsp
+        isSep           = isWordSeparator $ Text.head t
+        notSpace        = not . isSpace
+        (firstWord, t2) = Text.span (\c -> isWordSeparator c == isSep && notSpace c) t
+        (empty,     t3) = Text.span isSpace t2
+        total           = Text.length firstWord + Text.length empty
 
 prevWordIndex :: Text.Text -> Int
 prevWordIndex t = movedChars
     where
+        notSpace         = not . isSpace
+        notSep           = not . isWordSeparator
         (spaces, t1)     = Text.span isSpace $ Text.reverse t
-        (separation, t2) = Text.span isWordSeparator t1
-        (firstWord, t3)  = Text.span (not . isWordSeparator) t1
+        (separation, t2) = Text.span (\c -> notSep c && notSpace c) t1
+        (firstWord, t3)  = Text.span (\c -> isWordSeparator c && notSpace c) t1
         movedChars
             | Text.length firstWord == 0 =
                 Text.length spaces + Text.length separation
-            | otherwise                  =
+            | otherwise =
                 Text.length spaces + Text.length firstWord
