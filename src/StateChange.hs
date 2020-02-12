@@ -295,7 +295,7 @@ changeState state (ActDeleteLine n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let (row, col) = Window.cursorPos window
     let (targetRow, _) = Buffer.closestPos buffer (row + n - 1, 0)
-    (newBuffer, removedText) <- Buffer.deleteLines buffer row targetRow
+    (newBuffer, removedText) <- Buffer.deleteLines buffer row targetRow True
     let newPos = Buffer.closestPos newBuffer (row, col)
     return (State.setCursorPos (replaceBuffer state newBuffer) window newPos, [])
 

@@ -97,7 +97,7 @@ main = do
 tests :: [Test]
 tests = [
         (
-            "Move 1 character to the right",
+            "Move 1 character to the right: l",
             unp "l",
             \state -> do
                 window <- State.getActiveWindow state
@@ -105,7 +105,7 @@ tests = [
                 return state
         ),
         (
-            "Move 10 characters to the right",
+            "Move 10 characters to the right: 10l",
             unp "10l",
             \state -> do
                 window <- State.getActiveWindow state
@@ -113,7 +113,7 @@ tests = [
                 return state
         ),
         (
-            "Move 1000 characters to the right",
+            "Move 1000 characters to the right: 1000l",
             unp "1000l",
             \state -> do
                 window <- State.getActiveWindow state
@@ -121,7 +121,7 @@ tests = [
                 return state
         ),
         (
-            "Move 1 line down",
+            "Move 1 line down: j",
             unp "j",
             \state -> do
                 window <- State.getActiveWindow state
@@ -129,7 +129,7 @@ tests = [
                 return state
         ),
         (
-            "Move 3 lines down",
+            "Move 3 lines down: 3j",
             unp "3j",
             \state -> do
                 window <- State.getActiveWindow state
@@ -137,7 +137,7 @@ tests = [
                 return state
         ),
         (
-            "Move 1 line down and 1 line up",
+            "Move 1 line down and 1 line up: jk",
             unp "jk",
             \state -> do
                 window <- State.getActiveWindow state
@@ -145,7 +145,7 @@ tests = [
                 return state
         ),
         (
-            "Move 10 lines up",
+            "Move 10 lines up: 10k",
             unp "10k",
             \state -> do
                 window <- State.getActiveWindow state
@@ -153,7 +153,7 @@ tests = [
                 return state
         ),
         (
-            "Move to the end of the line",
+            "Move to the end of the line: $",
             unp "$",
             \state -> do
                 window <- State.getActiveWindow state
@@ -161,7 +161,7 @@ tests = [
                 return state
         ),
         (
-            "Move 1 line down and to the beginning",
+            "Move 1 line down and to the beginning: j0",
             unp "j0",
             \state -> do
                 window <- State.getActiveWindow state
@@ -169,7 +169,7 @@ tests = [
                 return state
         ),
         (
-            "Move 1 line down and to the first none-whitespace character",
+            "Move 1 line down and to the first none-whitespace character: j^",
             unp "j^",
             \state -> do
                 window <- State.getActiveWindow state
@@ -178,7 +178,7 @@ tests = [
                 return state
         ),
         (
-            "Insert text",
+            "Insert text: iTest",
             unp "iTest",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -188,7 +188,7 @@ tests = [
                 return state
         ),
         (
-            "Delete a character",
+            "Delete a character: x",
             unp "x",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -198,7 +198,7 @@ tests = [
                 return state
         ),
         (
-            "Delete 4 characters",
+            "Delete 4 characters: 4x",
             unp "4x",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -208,7 +208,7 @@ tests = [
                 return state
         ),
         (
-            "Delete 1000 characters",
+            "Delete 1000 characters: 1000x",
             unp "1000x",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -218,7 +218,7 @@ tests = [
                 return state
         ),
         (
-            "Delete 1 line",
+            "Delete 1 line: dd",
             unp "dd",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -229,7 +229,7 @@ tests = [
                 return state
         ),
         (
-            "Delete 10 lines",
+            "Delete 10 lines: 10dd",
             unp "10dd",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -240,7 +240,7 @@ tests = [
                 return state
         ),
         (
-            "Delete 1000 lines",
+            "Delete 1000 lines: 1000dd",
             unp "1000dd",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -251,7 +251,112 @@ tests = [
                 return state
         ),
         (
-            "10 page downs",
+            "Delete character: dl",
+            unp "dl",
+            \state -> do
+                (window, buffer) <- State.getActiveWindowAndBuffer state
+                guard (Window.cursorPos window == (0,0))
+                line <- Buffer.lineForPos buffer (0,0)
+                guard $ Text.take 4 line == "orem"
+                return state
+        ),
+        (
+            "Delete until 'm': dfm",
+            unp "dfm",
+            \state -> do
+                (window, buffer) <- State.getActiveWindowAndBuffer state
+                guard (Window.cursorPos window == (0,0))
+                line <- Buffer.lineForPos buffer (0,0)
+                guard $ Text.take 6 line == " ipsum"
+                return state
+        ),
+        (
+            "Delete until end of line: d$",
+            unp "d$",
+            \state -> do
+                (window, buffer) <- State.getActiveWindowAndBuffer state
+                guard (Window.cursorPos window == (0,0))
+                line <- Buffer.lineForPos buffer (0,0)
+                guard $ line == ""
+                return state
+        ),
+        (
+            "Delete until end of next line: d2$",
+            unp "d2$",
+            \state -> do
+                (window, buffer) <- State.getActiveWindowAndBuffer state
+                guard (Window.cursorPos window == (0,0))
+                line <- Buffer.lineForPos buffer (0,0)
+                guard $ Text.take 5 line == "dolor"
+                guard $ Buffer.lineCount buffer == 104
+                return state
+        ),
+        (
+            "Replace current character: rX",
+            unp "rX",
+            \state -> do
+                (window, buffer) <- State.getActiveWindowAndBuffer state
+                guard (Window.cursorPos window == (0,0))
+                line <- Buffer.lineForPos buffer (0,0)
+                guard $ Text.take 5 line == "Xorem"
+                return state
+        ),
+        (
+            "Replace 5 characters: 5rX",
+            unp "5rX",
+            \state -> do
+                (window, buffer) <- State.getActiveWindowAndBuffer state
+                guard (Window.cursorPos window == (0,4))
+                line <- Buffer.lineForPos buffer (0,0)
+                guard $ Text.take 5 line == "XXXXX"
+                return state
+        ),
+        (
+            "Insert text with Enter: iHAHA{ENTER}{ESC}",
+            unp "iHAHA\n\ESC",
+            \state -> do
+                (window, buffer) <- State.getActiveWindowAndBuffer state
+                guard (Window.cursorPos window == (1,0))
+                line <- Buffer.lineForPos buffer (0,0)
+                guard $ Buffer.lineCount buffer == 107
+                guard $ line == "HAHA"
+                return state
+        ),
+        (
+            "Join 2 lines: J",
+            unp "J",
+            \state -> do
+                (window, buffer) <- State.getActiveWindowAndBuffer state
+                guard (Window.cursorPos window == (0,0))
+                line <- Buffer.lineForPos buffer (0,0)
+                guard $ Buffer.lineCount buffer == 105
+                guard $ (Text.take 3 . Text.reverse) line == "des"
+                return state
+        ),
+        (
+            "Join 3 lines: 3J",
+            unp "3J",
+            \state -> do
+                (window, buffer) <- State.getActiveWindowAndBuffer state
+                guard (Window.cursorPos window == (0,0))
+                line <- Buffer.lineForPos buffer (0,0)
+                guard $ Buffer.lineCount buffer == 104
+                guard $ (Text.take 3 . Text.reverse) line == "te "
+                return state
+        ),
+        (
+            "Join 1000 lines: 1000J",
+            unp "1000J",
+            \state -> do
+                (window, buffer) <- State.getActiveWindowAndBuffer state
+                guard (Window.cursorPos window == (0,0))
+                line <- Buffer.lineForPos buffer (0,0)
+                guard $ Buffer.lineCount buffer == 1
+                guard $ (Text.take 3 . Text.reverse) line == ".xe"
+                return state
+        ),
+        (
+            "10 page downs: 10{PAGE_DOWN}",
             unp "10\EOT",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -259,7 +364,7 @@ tests = [
                 return state
         ),
         (
-            "10 page downs, 10 page ups",
+            "10 page downs, 10 page ups: 10{PAGE_DOWN}10{PAGE_UP}",
             unp "10\EOT10\NAK",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -267,7 +372,7 @@ tests = [
                 return state
         ),
         (
-            "Find character",
+            "Find character: fi",
             unp "fi",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -275,7 +380,7 @@ tests = [
                 return state
         ),
         (
-            "Find character twice",
+            "Find character twice: 2fi",
             unp "2fi",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -283,7 +388,7 @@ tests = [
                 return state
         ),
         (
-            "Move to end of line and find character backwards",
+            "Move to end of line and find character backwards: $Fq",
             unp "$Fq",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -291,7 +396,7 @@ tests = [
                 return state
         ),
         (
-            "Open line and type",
+            "Open line and type: oTEST{ESC}",
             unp "oTEST\ESC",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -300,7 +405,7 @@ tests = [
                 return state
         ),
         (
-            "Split line",
+            "Split line: i{ENTER}{ESC}",
             unp "i\n\ESC",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state
@@ -313,7 +418,7 @@ tests = [
                 return state
         ),
         (
-            "Delete all and undo",
+            "Delete all and undo: 1000dduru",
             unp "1000dduru",
             \state -> do
                 (window, buffer) <- State.getActiveWindowAndBuffer state

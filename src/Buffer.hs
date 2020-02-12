@@ -17,6 +17,7 @@
 
 module Buffer where
 
+import Control.Monad (guard)
 import Data.Foldable (toList)
 import qualified Data.Sequence as Sequence
 import qualified Data.Map.Strict as Map
@@ -142,7 +143,10 @@ joinLines buffer pos@(row, _) count updateHistory = do
     selection <- getLineRange buffer row count
     let list = toList selection
     let newLine = Text.intercalate " " $ map Text.strip list
-    (buf, _) <- deleteLines buffer row (row+count)
+    let linesLeft = Buffer.lineCount buffer - row
+    guard $ linesLeft > 1
+    let realCount = if row + count > linesLeft then (linesLeft - row) else count
+    (buf, _) <- deleteLines buffer row (row + realCount - 1) False
     let newBuffer = buf {
         bLines = Sequence.insertAt row newLine (bLines buf),
         history = if updateHistory
@@ -190,13 +194,12 @@ deleteSection' removed buffer pos1 pos2
         -- the way to the last column, we remove the entire line instead.
         if removed == "" || Text.length l > toCol + 1
             then deleteText buffer fromPos (toCol - fromCol + 1) True
-            else deleteLine buffer fromRow
+            else deleteLine buffer fromRow True
     | otherwise = do
-        traceMonad fromCol
         let deleteline = fromCol == 0
         (b1, t1) <- if deleteline
             then
-                deleteLine buffer fromRow
+                deleteLine buffer fromRow True
             else
                 deleteText buffer fromPos (-1) True
         let newRemoved = Text.intercalate "\n" [removed, t1]
@@ -207,10 +210,14 @@ deleteSection' removed buffer pos1 pos2
         fromPos@(fromRow, fromCol) = smallestPos pos1 pos2
         toPos@(toRow, toCol) = largestPos pos1 pos2
 
-deleteLine :: Buffer -> Int -> Maybe (Buffer, Text.Text)
-deleteLine buffer row = do
+-- |'deleteLine' deletes the line at the given row. If you pass checkEmpty as
+-- False it won't insert a new line after the last one has been removed. You
+-- will have to handle that manually in that case, since there should always be
+-- one line.
+deleteLine :: Buffer -> Int -> Bool -> Maybe (Buffer, Text.Text)
+deleteLine buffer row checkEmpty = do
     text <- lineForPos buffer (row, 0)
-    let (newLines, newHistory) = if lineCount buffer == 1
+    let (newLines, newHistory) = if lineCount buffer == 1 && checkEmpty
         then (
                 Sequence.fromList [""],
                 (InsertLine 0 "") : (DeleteLine row text) : history buffer
@@ -225,21 +232,21 @@ deleteLine buffer row = do
             history = newHistory
         }, text)
 
-deleteLines :: Buffer -> Int -> Int -> Maybe (Buffer, Text.Text)
-deleteLines buffer row1 row2 = do
+deleteLines :: Buffer -> Int -> Int -> Bool -> Maybe (Buffer, Text.Text)
+deleteLines buffer row1 row2 checkEmpty = do
     let range = take (toRow - fromRow + 1) $ repeat fromRow
-    (newBuffer, texts) <- deleteLines' (Just (buffer, [])) range
+    (newBuffer, texts) <- deleteLines' (Just (buffer, [])) range checkEmpty
     return (newBuffer, Text.intercalate "\n" texts)
     where
         fromRow = min row1 row2
         toRow = max row1 row2
 
-deleteLines' :: Maybe (Buffer, [Text.Text]) -> [Int] -> Maybe (Buffer, [Text.Text])
-deleteLines' Nothing _ = Nothing
-deleteLines' x [] = x
-deleteLines' (Just (buffer, texts)) (x:xs) = do
-    (newBuffer, text) <- deleteLine buffer x
-    deleteLines' (Just (newBuffer, text:texts)) xs
+deleteLines' :: Maybe (Buffer, [Text.Text]) -> [Int] -> Bool -> Maybe (Buffer, [Text.Text])
+deleteLines' Nothing _ _ = Nothing
+deleteLines' x [] _ = x
+deleteLines' (Just (buffer, texts)) (x:xs) checkEmpty = do
+    (newBuffer, text) <- deleteLine buffer x checkEmpty
+    deleteLines' (Just (newBuffer, text:texts)) xs checkEmpty
 
 -- ===============
 -- = Undo / Redo =
