@@ -177,6 +177,22 @@ tests = [
                 return state
         ),
         (
+            "Move to the end of the document: G",
+            unp "G",
+            \state -> do
+                window <- State.getActiveWindow state
+                guard (Window.cursorPos window == (105,0))
+                return state
+        ),
+        (
+            "Move to the end of the document and to the start: Ggg",
+            unp "Ggg",
+            \state -> do
+                window <- State.getActiveWindow state
+                guard (Window.cursorPos window == (0,0))
+                return state
+        ),
+        (
             "Move to the next word: w",
             unp "w",
             \state -> do
@@ -190,6 +206,46 @@ tests = [
             \state -> do
                 window <- State.getActiveWindow state
                 guard (Window.cursorPos window == (0,62))
+                return state
+        ),
+        (
+            "Move to the 100th word: 100w",
+            unp "100w",
+            \state -> do
+                window <- State.getActiveWindow state
+                guard (Window.cursorPos window == (6,60))
+                return state
+        ),
+        (
+            "Move to the end of the line and back 1 words: $b",
+            unp "$b",
+            \state -> do
+                window <- State.getActiveWindow state
+                guard (Window.cursorPos window == (0,79))
+                return state
+        ),
+        (
+            "Move to the end of the line and back 10 words: $b",
+            unp "$10b",
+            \state -> do
+                window <- State.getActiveWindow state
+                guard (Window.cursorPos window == (0,26))
+                return state
+        ),
+        (
+            "Move to the end of the document and back 100 words: G100b",
+            unp "G100b",
+            \state -> do
+                window <- State.getActiveWindow state
+                guard (Window.cursorPos window == (96,40))
+                return state
+        ),
+        (
+            "Move to line 50: 50gg",
+            unp "50gg",
+            \state -> do
+                window <- State.getActiveWindow state
+                guard (Window.cursorPos window == (49,0))
                 return state
         ),
         (
