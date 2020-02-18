@@ -69,14 +69,12 @@ changeState state (ActCursorRight n) = moveCursor state (0, n)
 
 -- Page down
 changeState state (ActPageDown n) = do
-    window <- getActiveWindow state
-    let (windowHeight, _) = Window.size window
+    windowHeight <- fst <$> Window.size <$> getActiveWindow state
     moveCursor state ((quot windowHeight 2) * n, 0)
 
 -- Page up
 changeState state (ActPageUp n) = do
-    window <- getActiveWindow state
-    let (windowHeight, _) = Window.size window
+    windowHeight <- fst <$> Window.size <$> getActiveWindow state
     moveCursor state ((- quot windowHeight 2) * n, 0)
 
 -- End of line
@@ -88,8 +86,7 @@ changeState state (ActEndOfLine) = do
 
 -- Beginning of line
 changeState state (ActBeginningOfLine) = do
-   window <- getActiveWindow state
-   let (_, cols) = Window.cursorPos window
+   cols <- snd <$> Window.cursorPos <$> getActiveWindow state
    moveCursor state (0, -cols)
 
 -- Move to first non-whitespace on the current line
@@ -116,8 +113,7 @@ changeState state (ActNextWord 0) = Just (state, [])
 changeState state (ActNextWord n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let pos@(row, col) = Window.cursorPos window
-    line <- Buffer.lineForPos buffer pos
-    let ind = nextWordIndex $ Text.drop col line
+    ind <- nextWordIndex <$> Text.drop col <$> Buffer.lineForPos buffer pos
     guard (ind /= 0 || Buffer.lineCount buffer > row + 1)
     if ind == 0
         then do
@@ -136,16 +132,14 @@ changeState state (ActPrevWord 0) = Just (state, [])
 changeState state (ActPrevWord n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let pos@(row, col) = Window.cursorPos window
-    line <- Buffer.lineForPos buffer pos
-    let ind = prevWordIndex $ Text.take col line
+    ind <- prevWordIndex <$> Text.take col <$> Buffer.lineForPos buffer pos
     guard (ind /= 0 || row > 0)
     if ind == 0
         then do
             (newState, _) <- foldMotions (Just (state, []))
                 [ActCursorUp 1, ActEndOfLine]
             (window2, buffer2) <- getActiveWindowAndBuffer newState
-            let pos2 = Window.cursorPos window2
-            line2 <- Buffer.lineForPos buffer2 pos2
+            line2 <- Buffer.lineForPos buffer2 $ Window.cursorPos window2
             if Text.length line2 > 1
                 then do
                     let c1 = Text.index line2 $ Text.length line2 - 1
@@ -173,8 +167,7 @@ changeState state (ActNextWordEnding n) = do
         changeState movedState $ ActNextWordEnding $ n - 1
 
 changeState state (ActFlagUndoPoint) = do
-    buffer <- getActiveBuffer state
-    let newBuffer = Buffer.flagUndoPoint buffer
+    newBuffer <- Buffer.flagUndoPoint <$> getActiveBuffer state
     return (replaceBuffer state newBuffer, [])
 
 -- Switch to insert mode
@@ -227,7 +220,7 @@ changeState state (ActDeleteChar n) = do
 
 -- Delete characters before current position
 changeState state (ActDeleteCharBefore n) = do
-    (movedState, _) <- changeState state $ ActCursorLeft n
+    movedState <- fst <$> changeState state (ActCursorLeft n)
     window <- getActiveWindow state
     movedWindow <- getActiveWindow movedState
     let pdiff = subPos (Window.cursorPos window) (Window.cursorPos movedWindow)
@@ -275,8 +268,7 @@ changeState state (ActDelete n [ActCursorUp m]) = do
     changeState newState (ActDeleteLine (n*m + 1))
 
 changeState state (ActDelete n motions) = do
-    oldWindow <- getActiveWindow state
-    let fromPos = Window.cursorPos oldWindow
+    fromPos <- Window.cursorPos <$> getActiveWindow state
     let motionLen = length motions
     (changedState,_) <- foldMotions (Just (state, []))
         $ take (n * motionLen) (cycle motions)
