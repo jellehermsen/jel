@@ -53,9 +53,9 @@ data Buffer = Buffer
     , undoDepth :: Int
     } deriving (Show, Eq)
 
-newBuffer :: BufferId -> Buffer
-newBuffer bufferId = Buffer
-    { bufferId = bufferId
+mkBuffer :: BufferId -> Buffer
+mkBuffer bufferId' = Buffer
+    { bufferId = bufferId'
     , bLines = Sequence.fromList [""]
     , history = []
     , path = ""
@@ -139,7 +139,7 @@ splitLine buffer pos updateHistory = do
 -- |Make a number of lines starting from a given position and a row count into
 -- one big line, intercalating them with a single "space".
 joinLines :: Buffer -> Position -> Int -> Bool -> Maybe Buffer
-joinLines buffer pos@(row, _) count updateHistory = do
+joinLines buffer (row, _) count updateHistory = do
     selection <- getLineRange buffer row count
     let list = toList selection
     let newLine = Text.intercalate " " $ map Text.strip list
@@ -147,7 +147,7 @@ joinLines buffer pos@(row, _) count updateHistory = do
     guard $ linesLeft > 1
     let realCount = if row + count > linesLeft then (linesLeft - row) else count
     (buf, _) <- deleteLines buffer row (row + realCount - 1) False
-    let newBuffer = buf {
+    return buf {
         bLines = Sequence.insertAt row newLine (bLines buf),
         history = if updateHistory
             then
@@ -155,7 +155,6 @@ joinLines buffer pos@(row, _) count updateHistory = do
             else
                 history buf
     }
-    return newBuffer
 
 -- |Delete n characters on given position. If n == -1 it deletes all the
 -- characters until the end of the line.
@@ -276,33 +275,35 @@ redoStep :: [PastEvent] -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
 redoStep _ Nothing = Nothing
 redoStep [] (Just (buf, pos)) = Just (buf, pos)
 
-redoStep (UndoFlag:xs) (Just (buffer, pos)) = Just (decUndoDepth buffer, pos)
+redoStep (UndoFlag:_) (Just (buffer, pos)) = Just (decUndoDepth buffer, pos)
 
-redoStep (InsertText pos text:xs) (Just (buffer, newPos)) = do
+redoStep (InsertText pos text:xs) (Just (buffer, _)) = do
     newBuffer <- insertText buffer pos text False
     redoStep xs (Just (decUndoDepth newBuffer, pos))
 
-redoStep (DeleteText pos text:xs) (Just (buffer, newPos)) = do
+redoStep (DeleteText pos text:xs) (Just (buffer, _)) = do
     (newBuffer, _) <- deleteText buffer pos (Text.length text) False
     redoStep xs (Just (decUndoDepth newBuffer, pos))
 
-redoStep (InsertLine row text:xs) (Just (buffer, newPos)) = do
+redoStep (InsertLine row text:xs) (Just (buffer, _)) = do
     let newBuffer = buffer {
         bLines = Sequence.insertAt row text (bLines buffer),
         undoDepth = (undoDepth buffer) - 1
     }
     redoStep xs (Just (newBuffer, (row, 0)))
 
-redoStep (DeleteLine row text:xs) (Just (buffer, newPos)) = do
+redoStep (DeleteLine row _:xs) (Just (buffer, _)) = do
     let newBuffer = buffer {
         bLines = Sequence.deleteAt row (bLines buffer),
         undoDepth = (undoDepth buffer) - 1
     }
     redoStep xs (Just (newBuffer, (row, 0)))
 
-redoStep (SplitLine pos@(row, col):xs) (Just (buffer, newPos)) = do
+redoStep (SplitLine pos@(row, col):xs) (Just (buffer, _)) = do
     newBuffer <- splitLine buffer pos False
     redoStep xs (Just (decUndoDepth newBuffer, (row + 1, col)))
+
+redoStep _ (Just _) = Nothing
 
 -- |'undo' is called with the amount of "undos", for example 10 when you do 10u
 -- a cursor position and a buffer and it returns a tuple with the new buffer,
@@ -319,31 +320,31 @@ undoStep :: [PastEvent] -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
 undoStep _ Nothing = Nothing
 undoStep [] (Just (buf, pos)) = Just (buf, pos)
 
-undoStep (UndoFlag:xs) (Just (buffer, pos)) = Just (incUndoDepth buffer, pos)
+undoStep (UndoFlag:_) (Just (buffer, pos)) = Just (incUndoDepth buffer, pos)
 
-undoStep (DeleteText pos text:xs) (Just (buffer, newPos)) = do
+undoStep (DeleteText pos text:xs) (Just (buffer, _)) = do
     newBuffer <- insertText buffer pos text False
     undoStep xs (Just (incUndoDepth newBuffer, pos))
 
-undoStep (InsertText pos text:xs) (Just (buffer, newPos)) = do
+undoStep (InsertText pos text:xs) (Just (buffer, _)) = do
     (newBuffer, _) <- deleteText buffer pos (Text.length text) False
     undoStep xs (Just (incUndoDepth newBuffer, pos))
 
-undoStep (DeleteLine row text:xs) (Just (buffer, newPos)) = do
+undoStep (DeleteLine row text:xs) (Just (buffer, _)) = do
     let newBuffer = buffer {
         bLines = Sequence.insertAt row text (bLines buffer),
         undoDepth = (undoDepth buffer) + 1
     }
     undoStep xs (Just (newBuffer, (row, 0)))
 
-undoStep (InsertLine row text:xs) (Just (buffer, newPos)) = do
+undoStep (InsertLine row _:xs) (Just (buffer, _)) = do
     let newBuffer = buffer {
         bLines = Sequence.deleteAt row (bLines buffer),
         undoDepth = (undoDepth buffer) + 1
     }
     undoStep xs (Just (newBuffer, (row, 0)))
 
-undoStep (SplitLine pos@(row, col):xs) (Just (buffer, newPos)) = do
+undoStep (SplitLine pos@(row, _):xs) (Just (buffer, _)) = do
    line1 <- lineForPos buffer pos
    line2 <- lineForPos buffer (row + 1, 0)
 
@@ -354,6 +355,8 @@ undoStep (SplitLine pos@(row, col):xs) (Just (buffer, newPos)) = do
    }
 
    undoStep xs (Just (newBuffer, (row, 0)))
+
+undoStep _ (Just _) = Nothing
 
 -- ===========
 -- = History =

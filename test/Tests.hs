@@ -13,11 +13,8 @@ import System.Exit (exitFailure)
 import Paths_jel
 
 import Types
-import Helpers
 
 import qualified Buffer
-import qualified Event
-import qualified Gui
 import qualified Input
 import qualified State
 import qualified StateChange
@@ -45,10 +42,11 @@ runTest state (char:chars) testFunc = runTest (handleActions newState actions) c
 
 runTests :: [Test] -> State.State -> [(Text.Text, Bool)]
 runTests [] _ = []
-runTests (test:tests) state = (label, runTest state input testFunc):(runTests tests state)
+runTests (test:xs) state = (label, runTest state input testFunc):(runTests xs state)
     where
         (label,input,testFunc) = test
 
+unp :: Text.Text -> String
 unp = Text.unpack
 
 green :: IO ()
@@ -78,10 +76,10 @@ main = do
     let testText = Sequence.fromList $ Text.lines contents
     success <- Curses.runCurses $ do
         firstCWindow <- Curses.defaultWindow
-        let firstBuffer = (Buffer.newBuffer 0){Buffer.bLines = testText}
+        let firstBuffer = (Buffer.mkBuffer 0){Buffer.bLines = testText}
         let firstWindow = Window.newWindow 1 0 firstCWindow (24, 80)
         lastLineCWindow <- Curses.defaultWindow
-        let state = State.insertBuffer (State.newState firstWindow lastLineCWindow (25, 80)) 0 firstBuffer
+        let state = State.insertBuffer (State.mkState firstWindow lastLineCWindow (25, 80)) 0 firstBuffer
         let results = runTests tests state
         liftIO $ putStrLn "--------------------------------"
         liftIO $ mapM_ printResult results
@@ -430,7 +428,7 @@ tests = [
             "10 page downs: 10{PAGE_DOWN}",
             unp "10\EOT",
             \state -> do
-                (window, buffer) <- State.getActiveWindowAndBuffer state
+                window <- State.getActiveWindow state
                 guard (Window.cursorPos window == (105,0))
                 return state
         ),
@@ -438,7 +436,7 @@ tests = [
             "10 page downs, 10 page ups: 10{PAGE_DOWN}10{PAGE_UP}",
             unp "10\EOT10\NAK",
             \state -> do
-                (window, buffer) <- State.getActiveWindowAndBuffer state
+                window <- State.getActiveWindow state
                 guard (Window.cursorPos window == (0,0))
                 return state
         ),
@@ -446,7 +444,7 @@ tests = [
             "Find character: fi",
             unp "fi",
             \state -> do
-                (window, buffer) <- State.getActiveWindowAndBuffer state
+                window <- State.getActiveWindow state
                 guard (Window.cursorPos window == (0,6))
                 return state
         ),
@@ -454,7 +452,7 @@ tests = [
             "Find character twice: 2fi",
             unp "2fi",
             \state -> do
-                (window, buffer) <- State.getActiveWindowAndBuffer state
+                window <- State.getActiveWindow state
                 guard (Window.cursorPos window == (0,19))
                 return state
         ),
@@ -462,7 +460,7 @@ tests = [
             "Move to end of line and find character backwards: $Fq",
             unp "$Fq",
             \state -> do
-                (window, buffer) <- State.getActiveWindowAndBuffer state
+                window <- State.getActiveWindow state
                 guard (Window.cursorPos window == (0,79))
                 return state
         ),

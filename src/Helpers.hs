@@ -20,7 +20,7 @@ module Helpers where
 import qualified Debug.Trace as Debug
 import qualified Data.Text as Text
 import Data.Char (isAlphaNum, isSpace)
-import System.IO.Unsafe as Unsafe
+import System.IO.Unsafe()
 import Types
 
 addPos :: Position -> Position -> Position
@@ -100,8 +100,8 @@ traceShow = Debug.traceShow
 split3 :: Int -> Int -> Text.Text -> (Text.Text, Text.Text, Text.Text)
 split3 len1 len2 t = (first, removed, second)
     where
-        (first, tail) = Text.splitAt len1 t
-        (removed, second) = Text.splitAt len2 tail
+        (first, rest) = Text.splitAt len1 t
+        (removed, second) = Text.splitAt len2 rest
 
 -- |'isWordSeparator' checks whether the given character is not a letter, digit or
 -- underscore, this takes UTF-8 letters into account
@@ -118,7 +118,7 @@ nextWordIndex t
         isSep           = isWordSeparator $ Text.head t
         notSpace        = not . isSpace
         (firstWord, t2) = Text.span (\c -> isWordSeparator c == isSep && notSpace c) t
-        (empty,     t3) = Text.span isSpace t2
+        empty           = Text.takeWhile isSpace t2
         total           = Text.length firstWord + Text.length empty
 
 prevWordIndex :: Text.Text -> Int
@@ -127,8 +127,8 @@ prevWordIndex t = movedChars
         notSpace         = not . isSpace
         notSep           = not . isWordSeparator
         (spaces, t1)     = Text.span isSpace $ Text.reverse t
-        (separation, t2) = Text.span (\c -> notSep c && notSpace c) t1
-        (firstWord, t3)  = Text.span (\c -> isWordSeparator c && notSpace c) t1
+        separation       = Text.takeWhile (\c -> notSep c && notSpace c) t1
+        firstWord        = Text.takeWhile (\c -> isWordSeparator c && notSpace c) t1
         movedChars
             | Text.length firstWord == 0 =
                 Text.length spaces + Text.length separation

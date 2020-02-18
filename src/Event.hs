@@ -22,18 +22,14 @@ import qualified UI.NCurses as Curses
 import Control.Monad.IO.Class (liftIO)
 import System.Exit (exitSuccess)
 import Types
-import qualified Gui
 import qualified State
-import qualified Window
-
-import Helpers
 
 -- |'handleEvent' is used for side effects after processing commands and
 -- actions. This function can for example read or write from disk or quit the
 -- program.
 handleEvent :: Curses.Window -> State.State -> Event -> Curses.Curses (State.State)
 
-handleEvent _ state EvQuit = liftIO exitSuccess
+handleEvent _ _ EvQuit = liftIO exitSuccess
 
 handleEvent motherCWindow state EvRedrawScreen = do
     color <-  Curses.newColorID Curses.ColorMagenta Curses.ColorYellow 100

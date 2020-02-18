@@ -102,17 +102,17 @@ parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'O') = Right $ match
 parseInput CommandMode [] (Curses.EventCharacter 'O') = Right $ matchActions [CmdOpenLineBefore]
 
 -- Switch to insert after mode
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'i') = Right $ matchActions [CmdInsertMode]
+parseInput CommandMode [CmdAmount _] (Curses.EventCharacter 'i') = Right $ matchActions [CmdInsertMode]
 parseInput CommandMode [] (Curses.EventCharacter 'i') = Right $ matchActions [CmdInsertMode]
 
 parseInput CommandMode [] (Curses.EventCharacter '\f') = Right $ matchActions [CmdRedrawScreen]
 
 -- Switch to insert before mode
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'I') = Right $ matchActions [CmdInsertModeBefore]
+parseInput CommandMode [CmdAmount _] (Curses.EventCharacter 'I') = Right $ matchActions [CmdInsertModeBefore]
 parseInput CommandMode [] (Curses.EventCharacter 'I') = Right $ matchActions [CmdInsertModeBefore]
 
 -- Append
-parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'a') = Right $ matchActions [CmdAppend]
+parseInput CommandMode [CmdAmount _] (Curses.EventCharacter 'a') = Right $ matchActions [CmdAppend]
 parseInput CommandMode [] (Curses.EventCharacter 'a') = Right $ matchActions [CmdAppend]
 
 -- Switch back to command mode
@@ -173,7 +173,7 @@ parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '.') = Right $ match
 parseInput CommandMode [] (Curses.EventCharacter '.') = Right $ matchActions [CmdRepeat]
 
 -- Quit on ctrl-q
-parseInput mode cmds (Curses.EventCharacter '\DC1') = Right [ActQuit]
+parseInput _ _ (Curses.EventCharacter '\DC1') = Right [ActQuit]
 
 -- Delete sections
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'd') = Left [CmdDelete n]
@@ -228,9 +228,9 @@ matchActions [CmdAmount n, CmdDeleteCharBefore] = [ActFlagUndoPoint, ActDeleteCh
 matchActions [CmdDeleteCharBefore] = [ActFlagUndoPoint, ActDeleteCharBefore 1]
 matchActions [CmdDeleteLine n] = [ActFlagUndoPoint, ActDeleteLine n]
 matchActions [CmdInsertNewLine] = [ActInsertNewLine, ActCursorDown 1, ActFirstNoneWhiteSpace]
-matchActions [CmdAmount n, CmdOpenLine] = matchActions [CmdOpenLine]
+matchActions [CmdAmount _, CmdOpenLine] = matchActions [CmdOpenLine]
 matchActions [CmdOpenLine] = [ActFlagUndoPoint, ActEndOfLine, ActAdvanceCursor, ActInsertNewLine, ActCursorDown 1, ActInsertMode]
-matchActions [CmdAmount n, CmdOpenLineBefore] = matchActions [CmdOpenLineBefore]
+matchActions [CmdAmount _, CmdOpenLineBefore] = matchActions [CmdOpenLineBefore]
 matchActions [CmdOpenLineBefore] = [ActBeginningOfLine, ActInsertNewLine, ActInsertMode]
 matchActions [CmdAmount n, CmdUndo] = [ActUndo n]
 matchActions [CmdUndo] = [ActUndo 1]
@@ -269,7 +269,7 @@ isMotion :: Either [Command] [Action] -> PossibleMotion
 isMotion (Left _) = CouldBeMotion
 isMotion (Right [ActBeginningOfLine])     = Motion
 isMotion (Right [ActCursorDown _])        = Motion
-isMotion (Right ((ActCursorDown _):xs))   = Motion
+isMotion (Right ((ActCursorDown _):_))   = Motion
 isMotion (Right [ActCursorLeft _])        = Motion
 isMotion (Right [ActCursorRight _])       = Motion
 isMotion (Right [ActCursorUp _])          = Motion
@@ -277,10 +277,10 @@ isMotion (Right (ActEndOfLine:_))         = Motion
 isMotion (Right [ActFirstNoneWhiteSpace]) = Motion
 isMotion (Right [ActFindForward _ _])     = Motion
 isMotion (Right [ActFindBackward _ _])    = Motion
-isMotion (Right [ActNextWord n])          = Motion
-isMotion (Right [ActPrevWord n])          = Motion
-isMotion (Right [ActNextWordEnding n])    = Motion
-isMotion (Right (ActGotoLine n:_))        = Motion
+isMotion (Right [ActNextWord _])          = Motion
+isMotion (Right [ActPrevWord _])          = Motion
+isMotion (Right [ActNextWordEnding _])    = Motion
+isMotion (Right (ActGotoLine _:_))        = Motion
 isMotion (Right (ActGotoLastLine:_))      = Motion
 isMotion _ = NoMotion
 

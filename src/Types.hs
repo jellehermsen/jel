@@ -18,6 +18,7 @@
 module Types where
 
 import qualified UI.NCurses as Curses
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
 type V2 = (Int, Int)
@@ -30,6 +31,8 @@ type Size = V2
 data Mode = CommandMode | InsertMode | LastLineMode | VisualMode |
             VisualLineMode | ReplaceMode
   deriving (Show, Eq)
+
+type Registers = Map.Map Text.Text Text.Text
 
 data Command = CmdAmount Int
     | CmdAppend

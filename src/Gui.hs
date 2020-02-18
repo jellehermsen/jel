@@ -20,7 +20,6 @@ module Gui where
 import qualified UI.NCurses as Curses
 import qualified Data.Text as Text
 import qualified Data.Sequence as Sequence
-import Data.List
 
 import Types
 import qualified Buffer
@@ -67,7 +66,6 @@ resetCursor window = Curses.moveCursor (toInteger row) (toInteger col)
 -- something :-)
 renderAll :: State.State -> Curses.Curses ()
 renderAll state = do
-    color <-  Curses.newColorID Curses.ColorMagenta Curses.ColorYellow 100
     case (State.getActiveWindow state) of
         Nothing -> return ()
         Just window -> do
@@ -81,14 +79,15 @@ renderAll state = do
             colorIdNormal <- Curses.newColorID (Curses.ColorWhite) (Curses.Color 200) 200
             colorIdComment <- Curses.newColorID (Curses.Color 201) (Curses.Color 200) 201
             Curses.updateWindow cw $ do
-                case buffer of
+                _ <- case buffer of
                     Just b -> do
                         Curses.setColor colorIdNormal
-                        let lines = fmap (prepLine scrollCol width) $ Sequence.drop (fromIntegral scrollRow) (Buffer.bLines b)
-                        let count = (fromIntegral $ Sequence.length lines) - 1
-                        mapM (\y -> drawTextAt y 0 (Window.size window) (Sequence.index lines (fromIntegral y))) [0..count]
+                        let lines' = fmap (prepLine scrollCol width) $ Sequence.drop (fromIntegral scrollRow) (Buffer.bLines b)
+                        let count = (fromIntegral $ Sequence.length lines') - 1
+                        _ <- mapM (\y -> drawTextAt y 0 (Window.size window) (Sequence.index lines' (fromIntegral y))) [0..count]
                         Curses.setColor colorIdComment
                         mapM (\y -> drawTextAt y 0 (Window.size window) emptyLine) [(count + 1)..height]
+                    Nothing -> return []
                 drawTextAt (height) 0 (width, height) (Text.pack (show (State.mode state )))
                 resetCursor window
             return ()

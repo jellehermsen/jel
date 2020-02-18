@@ -38,15 +38,15 @@ data Window = Window
     }
 
 newWindow :: WindowId -> Buffer.BufferId -> CWindow -> Size -> Window
-newWindow windowId bufferId cWindow size = Window
-    { windowId = windowId
+newWindow windowId' bufferId cWindow' size' = Window
+    { windowId = windowId'
     , buffer = bufferId
     , scrollPos = (0, 0)
     , cursorPos = (0, 0)
-    , size = size
+    , size = size'
     , readonly = False
     , windowType = File
-    , cWindow = cWindow
+    , cWindow = cWindow'
     }
 
 -- |Get the document cursor position relative to the scroll position. Used for

@@ -17,7 +17,6 @@
 
 module State where
 
-import Data.Maybe (isNothing)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 
@@ -28,7 +27,6 @@ import qualified Buffer
 
 type Windows = Map.Map Window.WindowId Window.Window
 type Buffers = Map.Map Buffer.BufferId Buffer.Buffer
-type Registers = Map.Map Text.Text Text.Text
 type ChangedState = Maybe (State, [Event])
 
 data State = State
@@ -42,17 +40,18 @@ data State = State
     , lastId :: Id
     , search :: Text.Text
     , command :: [Command]
-    , lastAction :: Action
     , lastLine :: Text.Text
     , lastLineCWindow :: CWindow
     , lastLineHistory :: [Text.Text]
     , searchHistory :: [Text.Text]
+    , macroRegister :: Text.Text
+    , dotInput :: Text.Text
     , screenSize :: Size
     }
 
-newState :: Window.Window -> CWindow -> V2 -> State
-newState firstWindow lastLineCWindow screenSize = State
-    { buffers = Map.insert 0 (Buffer.newBuffer 0) Map.empty
+mkState :: Window.Window -> CWindow -> V2 -> State
+mkState firstWindow lastLineCWindow' screenSize' = State
+    { buffers = Map.insert 0 (Buffer.mkBuffer 0) Map.empty
     , windows = Map.insert 1 firstWindow Map.empty
     , tabs = [[1]]
     , registers = Map.empty
@@ -62,12 +61,13 @@ newState firstWindow lastLineCWindow screenSize = State
     , lastId = 1
     , search = ""
     , command = []
-    , lastAction = ActIdle
     , lastLine = ""
-    , lastLineCWindow = lastLineCWindow
+    , lastLineCWindow = lastLineCWindow'
     , lastLineHistory = []
     , searchHistory = []
-    , screenSize = screenSize
+    , macroRegister = ""
+    , dotInput = ""
+    , screenSize = screenSize'
     }
 
 getActiveWindow :: State -> Maybe Window.Window
@@ -126,3 +126,8 @@ setCursorPos state window pos =
     }
     where
         newWindow = window {Window.cursorPos = pos}
+
+addToDot :: State -> Char -> State
+addToDot state c = state {
+    dotInput = Text.snoc (dotInput state) c
+}

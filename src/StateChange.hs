@@ -17,9 +17,8 @@
 
 module StateChange where
 
-import Control.Monad (foldM, guard)
+import Control.Monad (guard)
 import Data.Maybe (isNothing)
-import qualified Debug.Trace as Debug
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import Data.Char (isSpace)
@@ -36,7 +35,6 @@ moveCursor state (0, 0) = Just (state, [])
 moveCursor state dPos = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let pos = Buffer.closestPos buffer (addPos dPos (Window.cursorPos window))
-    let newWindow = window { Window.cursorPos = pos}
     if (Window.cursorPos window) /= pos then do
             let newState = State.setCursorPos state window pos
             Just (newState, [])
@@ -48,7 +46,7 @@ moveCursor state dPos = do
 -- you couldn't append to a line, or start typing on a previously empty line.
 advanceCursor :: State -> ChangedState
 advanceCursor state = do
-    (window, buffer) <- getActiveWindowAndBuffer state
+    window <- getActiveWindow state
     let pos = Window.cursorPos window
     let newState = State.setCursorPos state window $ addPos pos (0, 1)
     Just (newState, [])
@@ -232,10 +230,8 @@ changeState state (ActDeleteCharBefore n) = do
     (movedState, _) <- changeState state $ ActCursorLeft n
     window <- getActiveWindow state
     movedWindow <- getActiveWindow movedState
-    let posDiff = subPos
-                    (Window.cursorPos window)
-                    (Window.cursorPos movedWindow)
-    changeState movedState $ ActDeleteChar $ abs $ getCol posDiff
+    let pdiff = subPos (Window.cursorPos window) (Window.cursorPos movedWindow)
+    changeState movedState $ ActDeleteChar $ abs $ getCol pdiff
 
 -- Join lines
 changeState state (ActJoinLine n) = do
@@ -260,7 +256,7 @@ changeState state (ActRedo n) = do
     return (State.setCursorPos (replaceBuffer state newBuffer) window newPos, [])
 
 -- Delete sections
-changeState state (ActDelete 0 motions) = Just (state, [])
+changeState state (ActDelete 0 _) = Just (state, [])
 
 changeState state (ActDelete n [ActNextWord m]) =
     changeState state (ActDelete n [ActNextWordEnding m])
@@ -286,7 +282,7 @@ changeState state (ActDelete n motions) = do
         $ take (n * motionLen) (cycle motions)
     (window, buffer) <- getActiveWindowAndBuffer changedState
     let toPos = Window.cursorPos window
-    (newBuffer, removedText) <- Buffer.deleteSection buffer fromPos toPos
+    (newBuffer, _) <- Buffer.deleteSection buffer fromPos toPos
     let newPos = Buffer.closestPos newBuffer (smallestPos toPos fromPos)
     return (State.setCursorPos (replaceBuffer state newBuffer) window newPos, [])
 
@@ -295,7 +291,7 @@ changeState state (ActDeleteLine n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let (row, col) = Window.cursorPos window
     let (targetRow, _) = Buffer.closestPos buffer (row + n - 1, 0)
-    (newBuffer, removedText) <- Buffer.deleteLines buffer row targetRow True
+    (newBuffer, _) <- Buffer.deleteLines buffer row targetRow True
     let newPos = Buffer.closestPos newBuffer (row, col)
     return (State.setCursorPos (replaceBuffer state newBuffer) window newPos, [])
 
@@ -322,21 +318,15 @@ changeState state (ActReplaceChar n c) = do
     (deletedState, _) <- changeState state (ActDeleteChar n)
     let replacement = Text.replicate n $ Text.singleton c
     (window, buffer) <- getActiveWindowAndBuffer deletedState
-    let pos@(row, col) = Window.cursorPos window
+    let pos = Window.cursorPos window
     newBuffer <- Buffer.insertText buffer pos replacement True
     let newState = State.setCursorPos state window $ addPos pos $ (0, n - 1)
     return (replaceBuffer newState newBuffer, [])
 
--- Repeat
-changeState state (ActRepeat n) = do
-    (window, buffer) <- getActiveWindowAndBuffer state
-    let pos = Window.cursorPos window
-    return (state, [])
-
 changeState state ActAdvanceCursor = advanceCursor state
 changeState state ActRedrawScreen = Just (state, [EvRedrawScreen])
-changeState state ActIdle = Nothing
-changeState state (ActErrorMessage t) = Nothing
+changeState _ ActIdle = Nothing
+changeState _ (ActErrorMessage _) = Nothing
 changeState state _ = Just (state, [EvQuit])
 
 -- Helper functions
@@ -346,7 +336,7 @@ changeState state _ = Just (state, [EvQuit])
 wordEndOffset :: State -> Maybe Int
 wordEndOffset state = do
     (window, buffer) <- getActiveWindowAndBuffer state
-    let pos@(row, col) = Window.cursorPos window
+    let pos@(_, col) = Window.cursorPos window
     line <- Buffer.lineForPos buffer pos
     let text = Text.drop col line
     let char = Text.head text
