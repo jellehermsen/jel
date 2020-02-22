@@ -17,34 +17,35 @@
 
 module Main where
 
-import Prelude hiding (readFile, lines)
+import Prelude hiding (readFile)
 
 import Control.Monad (foldM)
 import qualified UI.NCurses as Curses
 import qualified Data.Sequence as Sequence
+import qualified Data.Text as Text
 import System.Environment (setEnv)
 
 -- Imports for testing
 import Data.Text.IO (readFile)
-import Data.Text (lines, unpack)
 import Paths_jel
 
 import Types
 import qualified Buffer
 import qualified Event
 import qualified Gui
+import qualified Helpers
 import qualified Input
 import qualified State
 import qualified StateChange
 import qualified Window
-import qualified Helpers
+import Repetition (recordDot)
 
 main :: IO ()
 main = do
     setEnv "ESCDELAY" "0"
-    filepath <- getDataFileName $ unpack "test.txt"
+    filepath <- getDataFileName $ Text.unpack "test.txt"
     contents <- readFile filepath
-    let testText = Sequence.fromList $ lines contents
+    let testText = Sequence.fromList $ Text.lines contents
     Curses.runCurses $ do
         Curses.setEcho False
         Curses.setRaw True
@@ -76,25 +77,45 @@ loop state cwindow = do
         Left _ -> loop state cwindow
         Right Nothing -> loop state cwindow
         Right (Just ev') -> do
-            newState <- handleInput state ev' cwindow
-            Gui.renderAll newState
-            Curses.render
-            loop newState cwindow
+            result <- handleInput cwindow (Just state) ev'
+            case result of
+                Nothing -> loop state cwindow
+                Just newState -> do
+                    Gui.renderAll newState
+                    Curses.render
+                    loop newState cwindow
 
-handleInput :: State.State -> Curses.Event -> CWindow -> Curses.Curses (State.State)
-handleInput state ev cwindow = do
+handleInput :: CWindow -> Maybe State.State -> Curses.Event -> Curses.Curses (Maybe State.State)
+handleInput _ Nothing _ = return Nothing
+handleInput cwindow (Just state) ev = do
     let input = Input.parseInput (State.mode state) (State.command state) ev
     let command = either id (\_ -> []) input
     let actions = either (\_ -> []) id input
-    let (newState, events) = handleActions (state {State.command = command}) actions []
-    postEventsState <- foldM (Event.handleEvent cwindow) newState events
-    return postEventsState
+    let newState = recordDot state ev actions
+    case actions of
+        [ActRepeat n] -> handleDot newState n cwindow
+        _ -> handleActions newState {State.command = command} actions cwindow
+
+handleDot :: State.State -> Int -> CWindow -> Curses.Curses (Maybe State.State)
+handleDot state n cwindow = do
+    let dotRegister = Text.unpack $ State.getRegister state "dot"
+    let keys = take (n * length dotRegister) $
+               Helpers.safeCycle $ map (Curses.EventCharacter) dotRegister
+    foldM (handleInput cwindow) (Just state) keys
+
+handleActions :: State.State -> [Action] -> CWindow -> Curses.Curses (Maybe State.State)
+handleActions state actions cwindow =
+    case (changeState state actions []) of
+        Nothing -> return Nothing
+        Just (newState, events) -> do
+            postEventsState <- foldM (Event.handleEvent cwindow) newState events
+            return $ Just postEventsState
 
 -- Changes the state using a list of actions, until one of the actions fail
-handleActions :: State.State -> [Action] -> [Event] -> (State.State, [Event])
-handleActions state [] events = (state, events)
-handleActions state (action:actions) events = 
+changeState :: State.State -> [Action] -> [Event] -> State.ChangedState
+changeState state [] events = Just (state, events)
+changeState state (action:actions) events =
     case (StateChange.changeState state action) of
-        Nothing -> (state, events)
+        Nothing -> Nothing
         Just (newState, newEvents) -> 
-            handleActions newState actions $ events ++ newEvents
+            changeState newState actions $ events ++ newEvents

@@ -134,3 +134,7 @@ prevWordIndex t = movedChars
                 Text.length spaces + Text.length separation
             | otherwise =
                 Text.length spaces + Text.length firstWord
+
+safeCycle :: [a] -> [a]
+safeCycle [] = []
+safeCycle xs = cycle xs

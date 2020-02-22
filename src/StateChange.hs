@@ -29,7 +29,6 @@ import State
 import qualified Window
 import qualified Buffer
 
-
 moveCursor :: State -> Position -> ChangedState
 moveCursor state (0, 0) = Just (state, [])
 moveCursor state dPos = do
@@ -38,8 +37,7 @@ moveCursor state dPos = do
     if (Window.cursorPos window) /= pos then do
             let newState = State.setCursorPos state window pos
             Just (newState, [])
-        else do
-            Nothing
+        else Nothing
 
 -- |Advances the cursor by one character, possibly putting it in a position
 -- beyond what the current line length should allow. This is necessary, otherwise
@@ -329,8 +327,7 @@ wordEndOffset :: State -> Maybe Int
 wordEndOffset state = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let pos@(_, col) = Window.cursorPos window
-    line <- Buffer.lineForPos buffer pos
-    let text = Text.drop col line
+    text <- Text.drop col <$> Buffer.lineForPos buffer pos
     let char = Text.head text
     let len = Text.length $ Text.takeWhile (match char) (Text.tail text)
     if Text.length text == 0 || len == 0 then Just 0 else Just len

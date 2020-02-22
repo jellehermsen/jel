@@ -36,10 +36,10 @@ data State = State
     , registers :: Registers
     , activeTab :: Int
     , activeWindow :: Int
+    , command :: [Command]
     , mode :: Mode
     , lastId :: Id
     , search :: Text.Text
-    , command :: [Command]
     , lastLine :: Text.Text
     , lastLineCWindow :: CWindow
     , lastLineHistory :: [Text.Text]
@@ -58,9 +58,9 @@ mkState firstWindow lastLineCWindow' screenSize' = State
     , activeTab = 0
     , activeWindow = 1 
     , mode = CommandMode
+    , command = []
     , lastId = 1
     , search = ""
-    , command = []
     , lastLine = ""
     , lastLineCWindow = lastLineCWindow'
     , lastLineHistory = []
@@ -103,6 +103,18 @@ replaceBuffer :: State -> Buffer.Buffer -> State
 replaceBuffer state buffer = state {
     buffers = Map.insert (Buffer.bufferId buffer) buffer (buffers state)
 }
+
+setRegister :: State -> Text.Text -> Text.Text -> State
+setRegister state register value = state {
+    registers = Map.insert register value (registers state)
+}
+
+getRegister :: State -> Text.Text -> Text.Text
+getRegister state register = case value of
+    Nothing -> ""
+    Just t  -> t
+    where
+        value = Map.lookup register (registers state)
 
 setScrollPos :: Window.Window -> Window.Window
 setScrollPos w = if inWindow 

@@ -269,7 +269,7 @@ isMotion :: Either [Command] [Action] -> PossibleMotion
 isMotion (Left _) = CouldBeMotion
 isMotion (Right [ActBeginningOfLine])     = Motion
 isMotion (Right [ActCursorDown _])        = Motion
-isMotion (Right ((ActCursorDown _):_))   = Motion
+isMotion (Right ((ActCursorDown _):_))    = Motion
 isMotion (Right [ActCursorLeft _])        = Motion
 isMotion (Right [ActCursorRight _])       = Motion
 isMotion (Right [ActCursorUp _])          = Motion
