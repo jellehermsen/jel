@@ -33,7 +33,7 @@ import Types
 import qualified Buffer
 import qualified Event
 import qualified Gui
-import qualified Helpers
+import Helpers
 import qualified Input
 import qualified State
 import qualified StateChange
@@ -72,7 +72,7 @@ main = do
 loop :: State.State -> CWindow -> Curses.Curses ()
 loop state cwindow = do
     ev <- Curses.tryCurses $ Curses.getEvent cwindow Nothing
-    _ <- Helpers.traceMonad ev
+    _ <- traceMonad ev
     case ev of
         Left _ -> loop state cwindow
         Right Nothing -> loop state cwindow
@@ -100,7 +100,7 @@ handleDot :: State.State -> Int -> CWindow -> Curses.Curses (Maybe State.State)
 handleDot state n cwindow = do
     let dotRegister = Text.unpack $ State.getRegister state "dot"
     let keys = take (n * length dotRegister) $
-               Helpers.safeCycle $ map (Curses.EventCharacter) dotRegister
+               safeCycle $ map (Curses.EventCharacter) dotRegister
     foldM (handleInput cwindow) (Just state) keys
 
 handleActions :: State.State -> [Action] -> CWindow -> Curses.Curses (Maybe State.State)

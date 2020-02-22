@@ -30,11 +30,12 @@ recordDot state (Curses.EventCharacter c) [] =
 recordDot state (Curses.EventCharacter c) actions =
     case (State.mode state, filteredActions) of
         (InsertMode, [ActCommandMode]) -> saveDotRegister $ addDotInput state c
-        (InsertMode, _)                -> addDotInput state c
-        (CommandMode, [])              -> state {State.dotInput = ""} 
+        (InsertMode, _) -> addDotInput state c
+        (CommandMode, []) -> state {State.dotInput = ""}
         (CommandMode, [ActInsertMode]) -> addDotInput state c
-        (CommandMode, _)               -> saveDotRegister $ addDotInput state c 
-        (_, _)                         -> state
+        (CommandMode, [ActInsertNewLine, ActInsertMode]) -> addDotInput state c
+        (CommandMode, _) -> saveDotRegister $ addDotInput state c
+        (_, _) -> state
     where
         filteredActions = filter isChangeAction actions
 
