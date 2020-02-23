@@ -88,12 +88,9 @@ loop state cwindow = do
 handleInput :: CWindow -> Maybe State.State -> Curses.Event -> Curses.Curses (Maybe State.State)
 handleInput _ Nothing _ = return Nothing
 handleInput cwindow (Just state) ev = do
-    traceMonad (State.command state)
     let input = Input.parseInput (State.mode state) (State.command state) ev
     let command = either id (\_ -> []) input
-    traceMonad command
     let actions = either (\_ -> []) id input
-    traceMonad actions
     let newState = recordDot state ev actions
     case actions of
         [ActRepeat n] -> handleDot newState n cwindow

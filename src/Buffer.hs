@@ -216,6 +216,7 @@ deleteSection' removed buffer pos1 pos2
 deleteLine :: Buffer -> Int -> Bool -> Maybe (Buffer, Text.Text)
 deleteLine buffer row checkEmpty = do
     text <- lineForPos buffer (row, 0)
+    guard (lineCount buffer > 1 || text /= "")
     let (newLines, newHistory) = if lineCount buffer == 1 && checkEmpty
         then (
                 Sequence.fromList [""],
