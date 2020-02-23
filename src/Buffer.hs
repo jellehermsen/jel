@@ -397,4 +397,6 @@ compressHistory (DeleteText pos1 text1:DeleteText pos2 text2:xs) =
             DeleteText pos2 (text1 `mappend` text2) : xs
         else
             DeleteText pos1 text1 : DeleteText pos2 text2 : xs
+
+compressHistory (UndoFlag:UndoFlag:xs) = UndoFlag : xs
 compressHistory xs = xs

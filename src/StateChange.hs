@@ -18,7 +18,7 @@
 module StateChange where
 
 import Control.Monad (guard)
-import Data.Maybe (isNothing)
+import Data.Maybe (isNothing, fromMaybe)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import Data.Char (isSpace)
@@ -80,7 +80,8 @@ changeState state (ActEndOfLine) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
     line <- Buffer.lineForPos buffer cursorPos
-    moveCursor state (0, Text.length line - (snd cursorPos))
+    let changed = moveCursor state (0, Text.length line - (snd cursorPos))
+    return $ fromMaybe (state, []) changed
 
 -- Beginning of line
 changeState state (ActBeginningOfLine) = do
