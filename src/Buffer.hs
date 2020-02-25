@@ -99,7 +99,6 @@ getLineRange buffer from count
 -- =====================
 -- = Buffer operations =
 -- =====================
-
 insertText :: Buffer -> Position -> Text.Text -> Bool -> Maybe Buffer
 insertText buffer pos text updateHistory = do
     line <- lineForPos buffer pos
@@ -116,6 +115,23 @@ insertText buffer pos text updateHistory = do
 
 insertChar :: Buffer -> Position -> Char -> Bool -> Maybe Buffer
 insertChar buffer pos c = insertText buffer pos (Text.singleton c)
+
+replaceText :: Buffer -> Position -> Text.Text -> Bool -> Maybe Buffer
+replaceText buffer pos text updateHistory = do
+    line <- lineForPos buffer pos
+    let (first, removed, second) = split3 (getCol pos) (Text.length text) line
+    let newLine = Text.concat [first, text, second]
+    Just buffer {
+        bLines = Sequence.update (getRow pos) newLine (bLines buffer),
+        history = if updateHistory
+            then
+                compressHistory $ ReplaceText pos removed text: history buffer
+            else
+                history buffer
+    }
+
+replaceChar :: Buffer -> Position -> Char -> Bool -> Maybe Buffer
+replaceChar buffer pos c = replaceText buffer pos (Text.singleton c)
 
 -- |Split a line into two different lines at the given position. Everything
 -- right to the split point is inserted as a new line below the given one.
@@ -286,6 +302,10 @@ redoStep (DeleteText pos text:xs) (Just (buffer, _)) = do
     (newBuffer, _) <- deleteText buffer pos (Text.length text) False
     redoStep xs (Just (decUndoDepth newBuffer, pos))
 
+redoStep (ReplaceText pos _ new:xs) (Just (buffer, _)) = do
+    newBuffer <- replaceText buffer pos new False
+    redoStep xs (Just (decUndoDepth newBuffer, pos))
+
 redoStep (InsertLine row text:xs) (Just (buffer, _)) = do
     let newBuffer = buffer {
         bLines = Sequence.insertAt row text (bLines buffer),
@@ -303,8 +323,6 @@ redoStep (DeleteLine row _:xs) (Just (buffer, _)) = do
 redoStep (SplitLine pos@(row, col):xs) (Just (buffer, _)) = do
     newBuffer <- splitLine buffer pos False
     redoStep xs (Just (decUndoDepth newBuffer, (row + 1, col)))
-
-redoStep _ (Just _) = Nothing
 
 -- |'undo' is called with the amount of "undos", for example 10 when you do 10u
 -- a cursor position and a buffer and it returns a tuple with the new buffer,
@@ -331,6 +349,11 @@ undoStep (InsertText pos text:xs) (Just (buffer, _)) = do
     (newBuffer, _) <- deleteText buffer pos (Text.length text) False
     undoStep xs (Just (incUndoDepth newBuffer, pos))
 
+undoStep (ReplaceText pos old new:xs) (Just (buffer, _)) = do
+    (buf1, _) <- deleteText buffer pos (Text.length new) False
+    buf2 <- insertText buf1 pos old False
+    undoStep xs (Just (incUndoDepth buf2, pos))
+
 undoStep (DeleteLine row text:xs) (Just (buffer, _)) = do
     let newBuffer = buffer {
         bLines = Sequence.insertAt row text (bLines buffer),
@@ -356,8 +379,6 @@ undoStep (SplitLine pos@(row, _):xs) (Just (buffer, _)) = do
    }
 
    undoStep xs (Just (newBuffer, (row, 0)))
-
-undoStep _ (Just _) = Nothing
 
 -- ===========
 -- = History =
@@ -388,7 +409,7 @@ compressHistory (InsertText pos1 text1:InsertText pos2 text2:xs) =
     if subV2 pos1 pos2 == (0, Text.length text2) then
         InsertText pos2 (text2 `mappend` text1):xs
     else
-        InsertText pos1 text1:InsertText pos2 text2 : xs
+        InsertText pos1 text1 : InsertText pos2 text2 : xs
 
 compressHistory (DeleteText pos1 text1:DeleteText pos2 text2:xs) =
     if pos1 == pos2 then
@@ -398,6 +419,12 @@ compressHistory (DeleteText pos1 text1:DeleteText pos2 text2:xs) =
             DeleteText pos2 (text1 `mappend` text2) : xs
         else
             DeleteText pos1 text1 : DeleteText pos2 text2 : xs
+
+compressHistory (ReplaceText pos1 old1 new1:ReplaceText pos2 old2 new2:xs) =
+    if subV2 pos1 pos2 == (0, Text.length new2) then
+        ReplaceText pos2 (old2 `mappend` old1) (new2 `mappend` new1):xs
+    else
+        ReplaceText pos1 old1 new1 : ReplaceText pos2 old2 new2 : xs
 
 compressHistory (UndoFlag:UndoFlag:xs) = UndoFlag : xs
 compressHistory xs = xs

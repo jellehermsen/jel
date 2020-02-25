@@ -74,6 +74,8 @@ data Command = CmdAmount Int
     | CmdGotoLine
     | CmdGotoFirstLine
     | CmdReplaceChar Int
+    | CmdReplaceCharAndMove Char
+    | CmdReplaceMode
     deriving (Show)
 
 data Action = ActIdle
@@ -111,6 +113,8 @@ data Action = ActIdle
     | ActNextWord Int
     | ActPrevWord Int
     | ActNextWordEnding Int
+    | ActReplaceMode
+    | ActReplaceCharAndMove Char
     deriving (Show)
 
 -- |All the events, which resemble disk operations or GUI changes

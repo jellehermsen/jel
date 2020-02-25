@@ -118,6 +118,7 @@ parseInput CommandMode [] (Curses.EventCharacter 'a') = Right $ matchActions [Cm
 -- Switch back to command mode
 parseInput CommandMode _ (Curses.EventCharacter '\ESC') = Left []
 parseInput InsertMode [] (Curses.EventCharacter '\ESC') = Right $ matchActions [CmdCommandMode]
+parseInput ReplaceMode [] (Curses.EventCharacter '\ESC') = Right $ matchActions [CmdCommandMode]
 
 -- Replace single character
 parseInput CommandMode [] (Curses.EventCharacter 'r') = Left [CmdReplaceChar 1]
@@ -128,10 +129,16 @@ parseInput CommandMode [CmdReplaceChar n] (Curses.EventCharacter c)
 
 -- Insert newline
 parseInput InsertMode [] (Curses.EventCharacter '\n') = Right $ matchActions [CmdInsertNewLine]
+parseInput ReplaceMode [] (Curses.EventCharacter '\n') = Right $ matchActions [CmdInsertNewLine]
 
 -- Insert character
 parseInput InsertMode [] (Curses.EventCharacter c)
     | isPrint c = Right $ matchActions [CmdInsertChar c]
+    | otherwise = Left []
+
+-- Replace character
+parseInput ReplaceMode [] (Curses.EventCharacter c)
+    | isPrint c = Right $ matchActions [CmdReplaceCharAndMove c]
     | otherwise = Left []
 
 -- Join lines
@@ -171,6 +178,8 @@ parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'E') = Right $ match
 -- Repeat last modification (dot command)
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '.') = Right $ matchActions [CmdAmount n, CmdRepeat]
 parseInput CommandMode [] (Curses.EventCharacter '.') = Right $ matchActions [CmdRepeat]
+
+parseInput CommandMode [] (Curses.EventCharacter 'R') = Right $ matchActions [CmdReplaceMode]
 
 -- Quit on ctrl-q
 parseInput _ _ (Curses.EventCharacter '\DC1') = Right [ActQuit]
@@ -220,6 +229,7 @@ matchActions [CmdAmount n, CmdPageUp] = [ActPageUp n]
 matchActions [CmdPageUp] = [ActPageUp 1]
 matchActions [CmdInsertMode] = [ActFlagUndoPoint, ActInsertMode]
 matchActions [CmdInsertModeBefore] = [ActFirstNoneWhiteSpace, ActInsertMode]
+matchActions [CmdReplaceMode] = [ActFlagUndoPoint, ActReplaceMode]
 matchActions [CmdCommandMode] = [ActCommandMode]
 matchActions [CmdInsertChar c] = [ActInsertChar c]
 matchActions [CmdAmount n, CmdDeleteChar] = [ActFlagUndoPoint, ActDeleteChar n]
@@ -256,6 +266,7 @@ matchActions [CmdAmount n, CmdNextWordEnding] = [ActNextWordEnding n]
 matchActions [CmdNextWordEnding] = [ActNextWordEnding 1]
 
 matchActions [CmdReplaceChar n, CmdChar c] = [ActFlagUndoPoint, ActReplaceChar n c]
+matchActions [CmdReplaceCharAndMove c] = [ActReplaceCharAndMove c]
 
 matchActions [CmdAmount n, CmdRepeat] = [ActRepeat n]
 matchActions [CmdRepeat] = [ActRepeat 1]

@@ -116,7 +116,7 @@ changeState state (ActNextWord n) = do
     guard (ind /= 0 || Buffer.lineCount buffer > row + 1)
     if ind == 0
         then do
-            (newState, _) <- foldMotions (Just (state, []))
+            (newState, _) <- foldActions (Just (state, []))
                 [ActCursorDown 1, ActFirstNoneWhiteSpace]
             changeState newState $ ActNextWord $ n - 1
         else do
@@ -135,7 +135,7 @@ changeState state (ActPrevWord n) = do
     guard (ind /= 0 || row > 0)
     if ind == 0
         then do
-            (newState, _) <- foldMotions (Just (state, []))
+            (newState, _) <- foldActions (Just (state, []))
                 [ActCursorUp 1, ActEndOfLine]
             (window2, buffer2) <- getActiveWindowAndBuffer newState
             line2 <- Buffer.lineForPos buffer2 $ Window.cursorPos window2
@@ -171,12 +171,15 @@ changeState state (ActFlagUndoPoint) = do
 
 -- Switch to insert mode
 changeState state (ActInsertMode) = do
-    (window, buffer) <- getActiveWindowAndBuffer state
-    if Window.readonly window then
-        Nothing
-    else do
-        let newState = replaceBuffer state buffer
-        return (newState {mode = InsertMode}, [])
+    window <- getActiveWindow state
+    guard $ not $ Window.readonly window
+    return (state {mode = InsertMode}, [])
+
+-- Switch to replace mode
+changeState state (ActReplaceMode) = do
+    window <- getActiveWindow state
+    guard $ not $ Window.readonly window
+    return (state {mode = ReplaceMode}, [])
 
 -- Switch to command mode
 -- Also reset the cursor position to an actual valid position. Insert mode
@@ -269,7 +272,7 @@ changeState state (ActDelete n [ActCursorUp m]) = do
 changeState state (ActDelete n motions) = do
     fromPos <- Window.cursorPos <$> getActiveWindow state
     let motionLen = length motions
-    (changedState,_) <- foldMotions (Just (state, []))
+    (changedState,_) <- foldActions (Just (state, []))
         $ take (n * motionLen) (cycle motions)
     (window, buffer) <- getActiveWindowAndBuffer changedState
     let toPos = Window.cursorPos window
@@ -314,6 +317,14 @@ changeState state (ActReplaceChar n c) = do
     let newState = State.setCursorPos state window $ addPos pos $ (0, n - 1)
     return (replaceBuffer newState newBuffer, [])
 
+-- Replace character and advance cursor
+changeState state (ActReplaceCharAndMove c) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let pos@(_, col) = Window.cursorPos window
+    line <- Buffer.lineForPos buffer pos
+    newBuffer <- Buffer.replaceChar buffer pos c True
+    advanceCursor $ replaceBuffer state newBuffer
+
 changeState state ActAdvanceCursor = advanceCursor state
 changeState state ActRedrawScreen = Just (state, [EvRedrawScreen])
 changeState _ ActIdle = Nothing
@@ -337,12 +348,12 @@ wordEndOffset state = do
             isWordSeparator c1 == isWordSeparator c2 && not (isSpace c2)
 
 -- |Fold a bunch of actions resembling motions over a given ChangedState
-foldMotions :: ChangedState -> [Action] -> ChangedState
-foldMotions Nothing _ = Nothing
-foldMotions (Just (state, _)) [] = Just (state, [])
-foldMotions (Just (state, _)) (motion:xs) = do
+foldActions :: ChangedState -> [Action] -> ChangedState
+foldActions Nothing _ = Nothing
+foldActions (Just (state, _)) [] = Just (state, [])
+foldActions (Just (state, _)) (motion:xs) = do
     let changedState = changeState state motion
     if isNothing changedState then
         Just (state, [])
     else
-        foldMotions changedState xs
+        foldActions changedState xs
