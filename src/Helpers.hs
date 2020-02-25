@@ -138,3 +138,11 @@ prevWordIndex t = movedChars
 safeCycle :: [a] -> [a]
 safeCycle [] = []
 safeCycle xs = cycle xs
+
+fromSingle :: Register -> Text.Text
+fromSingle (Single t) = t
+fromSingle _ = ""
+
+fromMulti :: Register -> [Text.Text]
+fromMulti (Multi xs) = xs
+fromMulti _ = []

@@ -104,14 +104,14 @@ replaceBuffer state buffer = state {
     buffers = Map.insert (Buffer.bufferId buffer) buffer (buffers state)
 }
 
-setRegister :: State -> Text.Text -> Text.Text -> State
-setRegister state register value = state {
-    registers = Map.insert register value (registers state)
+setRegister :: State -> Text.Text -> Register -> State
+setRegister state key register = state {
+    registers = Map.insert key register (registers state)
 }
 
-getRegister :: State -> Text.Text -> Text.Text
+getRegister :: State -> Text.Text -> Register
 getRegister state register = case value of
-    Nothing -> ""
+    Nothing -> Single ""
     Just t  -> t
     where
         value = Map.lookup register (registers state)

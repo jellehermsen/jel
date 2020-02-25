@@ -60,6 +60,6 @@ addDotInput state c = state {
 }
 
 saveDotRegister :: State.State -> State.State
-saveDotRegister state = (State.setRegister state "dot" (State.dotInput state)) {
+saveDotRegister state = (State.setRegister state "dot" (Single (State.dotInput state))) {
     State.dotInput = ""
 }

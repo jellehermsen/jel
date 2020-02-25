@@ -320,8 +320,7 @@ changeState state (ActReplaceChar n c) = do
 -- Replace character and advance cursor
 changeState state (ActReplaceCharAndMove c) = do
     (window, buffer) <- getActiveWindowAndBuffer state
-    let pos@(_, col) = Window.cursorPos window
-    line <- Buffer.lineForPos buffer pos
+    let pos = Window.cursorPos window
     newBuffer <- Buffer.replaceChar buffer pos c True
     advanceCursor $ replaceBuffer state newBuffer
 

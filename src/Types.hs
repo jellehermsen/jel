@@ -32,7 +32,8 @@ data Mode = CommandMode | InsertMode | LastLineMode | VisualMode |
             VisualLineMode | ReplaceMode
   deriving (Show, Eq)
 
-type Registers = Map.Map Text.Text Text.Text
+data Register = Single Text.Text | Multi [Text.Text]
+type Registers = Map.Map Text.Text Register
 
 data Command = CmdAmount Int
     | CmdAppend

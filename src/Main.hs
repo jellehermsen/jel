@@ -98,7 +98,7 @@ handleInput cwindow (Just state) ev = do
 
 handleDot :: State.State -> Int -> CWindow -> Curses.Curses (Maybe State.State)
 handleDot state n cwindow = do
-    let dotRegister = Text.unpack $ State.getRegister state "dot"
+    let dotRegister = Text.unpack $ fromSingle $ State.getRegister state "dot"
     let keys = take (n * length dotRegister) $
                safeCycle $ map (Curses.EventCharacter) dotRegister
     foldM (handleInput cwindow) (Just state) keys
