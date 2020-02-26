@@ -144,5 +144,5 @@ fromSingle (Single t) = t
 fromSingle _ = ""
 
 fromMulti :: Register -> [Text.Text]
-fromMulti (Multi xs) = xs
+fromMulti (Multi xs _) = xs
 fromMulti _ = []

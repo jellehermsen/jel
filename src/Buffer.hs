@@ -248,11 +248,11 @@ deleteLine buffer row checkEmpty = do
             history = newHistory
         }, text)
 
-deleteLines :: Buffer -> Int -> Int -> Bool -> Maybe (Buffer, Text.Text)
+deleteLines :: Buffer -> Int -> Int -> Bool -> Maybe (Buffer, [Text.Text])
 deleteLines buffer row1 row2 checkEmpty = do
     let range = take (toRow - fromRow + 1) $ repeat fromRow
     (newBuffer, texts) <- deleteLines' (Just (buffer, [])) range checkEmpty
-    return (newBuffer, Text.intercalate "\n" texts)
+    return (newBuffer, texts)
     where
         fromRow = min row1 row2
         toRow = max row1 row2

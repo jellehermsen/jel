@@ -28,11 +28,18 @@ type Position = V2
 type CWindow = Curses.Window
 type Size = V2
 
-data Mode = CommandMode | InsertMode | LastLineMode | VisualMode |
-            VisualLineMode | ReplaceMode
-  deriving (Show, Eq)
+data Mode = CommandMode
+    | InsertMode
+    | LastLineMode
+    | VisualMode
+    | VisualLineMode
+    | ReplaceMode
+    deriving (Show, Eq)
 
-data Register = Single Text.Text | Multi [Text.Text]
+-- |Single means that there's a text without newlines. Multi means multiple
+-- lines, the bool significes whether they start on a new line.
+data Register = Single Text.Text | Multi [Text.Text] Bool
+
 type Registers = Map.Map Text.Text Register
 
 data Command = CmdAmount Int
