@@ -33,7 +33,8 @@ moveCursor :: State -> Position -> ChangedState
 moveCursor state (0, 0) = Just (state, [])
 moveCursor state dPos = do
     (window, buffer) <- getActiveWindowAndBuffer state
-    let pos = Buffer.closestPos buffer (addPos dPos (Window.cursorPos window))
+    let countNewline = State.mode state `elem` [InsertMode, ReplaceMode, VisualMode]
+    let pos = Buffer.closestPos buffer countNewline (addPos dPos (Window.cursorPos window))
     if (Window.cursorPos window) /= pos then do
             let newState = State.setCursorPos state window pos
             Just (newState, [])
@@ -99,13 +100,13 @@ changeState state (ActFirstNoneWhiteSpace) = do
 changeState state (ActGotoLine n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
-    let newPos = Buffer.closestPos buffer (n - 1, 0)
+    let newPos = Buffer.closestPos buffer False (n - 1, 0)
     moveCursor state $ subPos newPos cursorPos
 
 changeState state (ActGotoLastLine) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
-    let newPos = Buffer.closestPos buffer (Buffer.lineCount buffer - 1, 0)
+    let newPos = Buffer.closestPos buffer False (Buffer.lineCount buffer - 1, 0)
     moveCursor state $ subPos newPos cursorPos
 
 changeState state (ActNextWord 0) = Just (state, [])
@@ -186,7 +187,7 @@ changeState state (ActReplaceMode) = do
 -- could have left the cursor in a position > the current line length.
 changeState state (ActCommandMode) = do
     (window, buffer) <- getActiveWindowAndBuffer state
-    let (row, col) = Buffer.closestPos buffer $ Window.cursorPos window
+    let (row, col) = Buffer.closestPos buffer False $ Window.cursorPos window
     let newWindow = window { Window.cursorPos = (row, col)}
     let newState = state {
         windows = Map.insert
@@ -217,7 +218,8 @@ changeState state (ActDeleteChar n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
     (newBuffer, _) <- Buffer.deleteText buffer cursorPos n True
-    let pos = Buffer.closestPos newBuffer $ Window.cursorPos window
+    let countNewline = State.mode state `elem` [InsertMode, ReplaceMode, VisualMode]
+    let pos = Buffer.closestPos newBuffer countNewline $ Window.cursorPos window
     noEvents $ State.setCursorPos (replaceBuffer state newBuffer) window pos
 
 -- Delete characters before current position
@@ -277,16 +279,16 @@ changeState state (ActDelete n motions) = do
     (window, buffer) <- getActiveWindowAndBuffer changedState
     let toPos = Window.cursorPos window
     (newBuffer, _) <- Buffer.deleteSection buffer fromPos toPos
-    let newPos = Buffer.closestPos newBuffer (smallestPos toPos fromPos)
+    let newPos = Buffer.closestPos newBuffer False (smallestPos toPos fromPos)
     noEvents $ State.setCursorPos (replaceBuffer state newBuffer) window newPos
 
 -- Delete lines
 changeState state (ActDeleteLine n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let (row, col) = Window.cursorPos window
-    let (targetRow, _) = Buffer.closestPos buffer (row + n - 1, 0)
+    let (targetRow, _) = Buffer.closestPos buffer False (row + n - 1, 0)
     (newBuffer, deletedLines) <- Buffer.deleteLines buffer row targetRow True
-    let newPos = Buffer.closestPos newBuffer (row, col)
+    let newPos = Buffer.closestPos newBuffer False (row, col)
     let newState = State.setRegister state "default" (Multi deletedLines True)
     noEvents $ State.setCursorPos (replaceBuffer newState newBuffer) window newPos
 
@@ -296,7 +298,7 @@ changeState state (ActFindForward n c) = do
     let pos@(row, col) = Window.cursorPos window
     line <- Buffer.lineForPos buffer pos
     index <- findNthIndex col n c line
-    let newPos = Buffer.closestPos buffer (row, col + index + 1)
+    let newPos = Buffer.closestPos buffer False (row, col + index + 1)
     noEvents $ State.setCursorPos state window newPos
 
 -- Find backward
@@ -305,7 +307,7 @@ changeState state (ActFindBackward n c) = do
     let pos@(row, col) = Window.cursorPos window
     line <- Buffer.lineForPos buffer pos
     index <- findNthIndex (Text.length line - col - 1) n c (Text.reverse line)
-    let newPos = Buffer.closestPos buffer (row, col - index - 1)
+    let newPos = Buffer.closestPos buffer False (row, col - index - 1)
     noEvents $ State.setCursorPos state window newPos
 
 -- Replace character

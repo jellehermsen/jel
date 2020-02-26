@@ -131,6 +131,9 @@ parseInput CommandMode [CmdReplaceChar n] (Curses.EventCharacter c)
 parseInput InsertMode [] (Curses.EventCharacter '\n') = Right $ matchActions [CmdInsertNewLine]
 parseInput ReplaceMode [] (Curses.EventCharacter '\n') = Right $ matchActions [CmdInsertNewLine]
 
+-- Backspace
+parseInput InsertMode [] (Curses.EventCharacter '\b') = Right $ matchActions [CmdBackspace]
+
 -- Insert character
 parseInput InsertMode [] (Curses.EventCharacter c)
     | isPrint c = Right $ matchActions [CmdInsertChar c]
@@ -232,6 +235,7 @@ matchActions [CmdInsertModeBefore] = [ActFirstNoneWhiteSpace, ActInsertMode]
 matchActions [CmdReplaceMode] = [ActFlagUndoPoint, ActReplaceMode]
 matchActions [CmdCommandMode] = [ActCommandMode]
 matchActions [CmdInsertChar c] = [ActInsertChar c]
+matchActions [CmdBackspace] = [ActDeleteCharBefore 1]
 matchActions [CmdAmount n, CmdDeleteChar] = [ActFlagUndoPoint, ActDeleteChar n]
 matchActions [CmdDeleteChar] = [ActFlagUndoPoint, ActDeleteChar 1]
 matchActions [CmdAmount n, CmdDeleteCharBefore] = [ActFlagUndoPoint, ActDeleteCharBefore n]
@@ -271,7 +275,7 @@ matchActions [CmdReplaceCharAndMove c] = [ActReplaceCharAndMove c]
 matchActions [CmdAmount n, CmdRepeat] = [ActRepeat n]
 matchActions [CmdRepeat] = [ActRepeat 1]
 
-matchActions [CmdAppend] = [ActAdvanceCursor, ActInsertMode]
+matchActions [CmdAppend] = [ActFlagUndoPoint, ActAdvanceCursor, ActInsertMode]
 matchActions _ = [ActIdle]
 
 -- |Check whether the input resembles (a part of) a motion. This is used when

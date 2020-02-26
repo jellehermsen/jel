@@ -73,12 +73,12 @@ lineCount buffer =  Sequence.length $ bLines buffer
 lineForPos :: Buffer -> Position -> Maybe Text.Text
 lineForPos buf (row, _) = Sequence.lookup row $ bLines buf
 
-closestPos :: Buffer -> Position -> Position
-closestPos buffer (row, col) = (closestRow, closestCol)
+closestPos :: Buffer -> Bool -> Position -> Position
+closestPos buffer countNewline (row, col) = (closestRow, closestCol)
     where
         rowLength  = fromIntegral $ lineCount buffer
         line       = Sequence.index (bLines buffer) $ fromIntegral closestRow
-        lineLength = fromIntegral (Text.length line)
+        lineLength = fromIntegral (Text.length line) + (if' countNewline 1 0)
         closestRow
             | row < 0           = 0
             | row >= rowLength  = rowLength - 1
@@ -416,7 +416,7 @@ compressHistory (DeleteText pos1 text1:DeleteText pos2 text2:xs) =
         DeleteText pos1 (text2 `mappend` text1) : xs
     else
         if subV2 pos1 pos2 == (0, -1) then
-            DeleteText pos2 (text1 `mappend` text2) : xs
+            DeleteText pos1 (text1 `mappend` text2) : xs
         else
             DeleteText pos1 text1 : DeleteText pos2 text2 : xs
 

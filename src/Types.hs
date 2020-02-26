@@ -84,6 +84,7 @@ data Command = CmdAmount Int
     | CmdReplaceChar Int
     | CmdReplaceCharAndMove Char
     | CmdReplaceMode
+    | CmdBackspace
     deriving (Show)
 
 data Action = ActIdle

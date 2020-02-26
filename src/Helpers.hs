@@ -146,3 +146,7 @@ fromSingle _ = ""
 fromMulti :: Register -> [Text.Text]
 fromMulti (Multi xs _) = xs
 fromMulti _ = []
+
+if' :: Bool -> a -> a -> a
+if' True  x _ = x
+if' False _ y = y
