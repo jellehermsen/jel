@@ -113,6 +113,26 @@ insertText buffer pos text updateHistory = do
                 history buffer
     }
 
+-- |Insert line at given position, shifting the rest of the lines over
+insertLine :: Buffer -> Position -> Text.Text -> Bool -> Maybe Buffer
+insertLine buffer pos text updateHistory = do
+    let row = fst pos
+    guard $ lineCount buffer >= row
+    Just buffer {
+        bLines = Sequence.insertAt row text (bLines buffer),
+        history = if updateHistory
+            then
+                InsertLine row text : history buffer
+            else
+                history buffer
+    }
+
+insertLines :: Buffer -> Position -> [Text.Text] -> Bool -> Maybe Buffer
+insertLines buffer _ [] _ = Just buffer
+insertLines buffer pos (x:xs) updateHistory = do
+    inserted <- insertLine buffer pos x updateHistory
+    insertLines inserted (addPos pos (1,0)) xs updateHistory
+
 insertChar :: Buffer -> Position -> Char -> Bool -> Maybe Buffer
 insertChar buffer pos c = insertText buffer pos (Text.singleton c)
 
@@ -248,11 +268,19 @@ deleteLine buffer row checkEmpty = do
             history = newHistory
         }, text)
 
+-- |Paste the contents of a given register
+paste :: Buffer -> Position -> Register -> Int -> Maybe Buffer
+paste buffer _ _ 0 = Just buffer
+paste buffer pos (Single text) n =
+    insertText buffer pos (Text.replicate n text) True
+paste buffer pos (Multi ls True) n =
+    insertLines buffer pos (ls) True
+paste buffer _ _ _ = Just buffer
+
 deleteLines :: Buffer -> Int -> Int -> Bool -> Maybe (Buffer, [Text.Text])
 deleteLines buffer row1 row2 checkEmpty = do
     let range = take (toRow - fromRow + 1) $ repeat fromRow
-    (newBuffer, texts) <- deleteLines' (Just (buffer, [])) range checkEmpty
-    return (newBuffer, texts)
+    deleteLines' (Just (buffer, [])) range checkEmpty
     where
         fromRow = min row1 row2
         toRow = max row1 row2
@@ -262,7 +290,7 @@ deleteLines' Nothing _ _ = Nothing
 deleteLines' x [] _ = x
 deleteLines' (Just (buffer, texts)) (x:xs) checkEmpty = do
     (newBuffer, text) <- deleteLine buffer x checkEmpty
-    deleteLines' (Just (newBuffer, text:texts)) xs checkEmpty
+    deleteLines' (Just (newBuffer, (texts ++ [text]))) xs checkEmpty
 
 -- ===============
 -- = Undo / Redo =
@@ -332,7 +360,7 @@ undo 0 pos buffer = Just (buffer, pos)
 undo count pos buffer = do
     let his = drop (undoDepth buffer) (history buffer)
     (newBuffer, newPos) <- undoStep his (Just (buffer, pos))
-    undo (count - 1) newPos newBuffer
+    undo (count - 1) (closestPos newBuffer False newPos) newBuffer
 
 undoStep :: [PastEvent] -> Maybe (Buffer, Position) -> Maybe (Buffer, Position)
 

@@ -217,10 +217,11 @@ changeState state (ActInsertNewLine) = do
 changeState state (ActDeleteChar n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let cursorPos = Window.cursorPos window
-    (newBuffer, _) <- Buffer.deleteText buffer cursorPos n True
+    (newBuffer, deleted) <- Buffer.deleteText buffer cursorPos n True
     let countNewline = State.mode state `elem` [InsertMode, ReplaceMode, VisualMode]
     let pos = Buffer.closestPos newBuffer countNewline $ Window.cursorPos window
-    noEvents $ State.setCursorPos (replaceBuffer state newBuffer) window pos
+    let newState = State.setRegister state "default" (Single deleted)
+    noEvents $ State.setCursorPos (replaceBuffer newState newBuffer) window pos
 
 -- Delete characters before current position
 changeState state (ActDeleteCharBefore n) = do
@@ -278,9 +279,10 @@ changeState state (ActDelete n motions) = do
         $ take (n * motionLen) (cycle motions)
     (window, buffer) <- getActiveWindowAndBuffer changedState
     let toPos = Window.cursorPos window
-    (newBuffer, _) <- Buffer.deleteSection buffer fromPos toPos
+    (newBuffer, deleted) <- Buffer.deleteSection buffer fromPos toPos
+    let newState = State.setRegister state "default" (Single deleted)
     let newPos = Buffer.closestPos newBuffer False (smallestPos toPos fromPos)
-    noEvents $ State.setCursorPos (replaceBuffer state newBuffer) window newPos
+    noEvents $ State.setCursorPos (replaceBuffer newState newBuffer) window newPos
 
 -- Delete lines
 changeState state (ActDeleteLine n) = do
@@ -312,13 +314,13 @@ changeState state (ActFindBackward n c) = do
 
 -- Replace character
 changeState state (ActReplaceChar n c) = do
-    (deletedState, _) <- changeState state (ActDeleteChar n)
+    (window, buffer) <- getActiveWindowAndBuffer state
     let replacement = Text.replicate n $ Text.singleton c
-    (window, buffer) <- getActiveWindowAndBuffer deletedState
     let pos = Window.cursorPos window
-    newBuffer <- Buffer.insertText buffer pos replacement True
+    buf1 <- fst <$> Buffer.deleteText buffer pos n True
+    buf2 <- Buffer.insertText buf1 pos replacement True
     let newState = State.setCursorPos state window $ addPos pos $ (0, n - 1)
-    noEvents $ replaceBuffer newState newBuffer
+    noEvents $ replaceBuffer newState buf2
 
 -- Replace character and advance cursor
 changeState state (ActReplaceCharAndMove c) = do
@@ -326,6 +328,33 @@ changeState state (ActReplaceCharAndMove c) = do
     let pos = Window.cursorPos window
     newBuffer <- Buffer.replaceChar buffer pos c True
     advanceCursor $ replaceBuffer state newBuffer
+
+-- Paste
+changeState state (ActPasteAfter n) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let pos@(row, _) = Window.cursorPos window
+    let register = State.getRegister state "default"
+    emptyLine <- (== "") <$> Buffer.lineForPos buffer pos
+    let insertPos = if sameLine register
+        then if emptyLine then pos else (addPos pos (0, 1))
+        else addPos pos (1, 0)
+    newBuffer <- Buffer.paste buffer insertPos register n
+    let newState = case register of
+            (Single t) -> State.setCursorPos state window $
+                Buffer.closestPos newBuffer False $
+                addPos pos (0, Text.length t)
+            (Multi _ False) -> State.setCursorPos state window $
+                Buffer.closestPos newBuffer False $
+                addPos pos (0, 1)
+            -- TODO go to first non whitespace
+            (Multi [] _) -> state
+            (Multi (t:_) True) -> State.setCursorPos state window $
+                (row + 1, Text.length (Text.takeWhile isSpace t))
+    noEvents $ replaceBuffer newState newBuffer
+    where
+        sameLine (Single _) = True
+        sameLine (Multi _ False) = True
+        sameLine _ = False
 
 changeState state ActAdvanceCursor = advanceCursor state
 changeState state ActRedrawScreen = Just (state, [EvRedrawScreen])

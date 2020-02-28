@@ -178,6 +178,10 @@ parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'e') = Right $ match
 parseInput CommandMode [] (Curses.EventCharacter 'E') = Right $ matchActions [CmdNextWordEnding]
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'E') = Right $ matchActions [CmdAmount n, CmdNextWordEnding]
 
+-- Paste
+parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'p') = Right $ matchActions [CmdAmount n, CmdPasteAfter]
+parseInput CommandMode [] (Curses.EventCharacter 'p') = Right $ matchActions [CmdPasteAfter]
+
 -- Repeat last modification (dot command)
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '.') = Right $ matchActions [CmdAmount n, CmdRepeat]
 parseInput CommandMode [] (Curses.EventCharacter '.') = Right $ matchActions [CmdRepeat]
@@ -268,6 +272,9 @@ matchActions [CmdAmount n, CmdPrevWord] = [ActPrevWord n]
 matchActions [CmdPrevWord] = [ActPrevWord 1]
 matchActions [CmdAmount n, CmdNextWordEnding] = [ActNextWordEnding n]
 matchActions [CmdNextWordEnding] = [ActNextWordEnding 1]
+
+matchActions [CmdPasteAfter] = [ActFlagUndoPoint, ActPasteAfter 1]
+matchActions [CmdAmount n, CmdPasteAfter] = [ActPasteAfter n]
 
 matchActions [CmdReplaceChar n, CmdChar c] = [ActFlagUndoPoint, ActReplaceChar n c]
 matchActions [CmdReplaceCharAndMove c] = [ActReplaceCharAndMove c]

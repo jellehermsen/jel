@@ -139,6 +139,10 @@ safeCycle :: [a] -> [a]
 safeCycle [] = []
 safeCycle xs = cycle xs
 
+isSingle :: Register -> Bool
+isSingle (Single _) = True
+isSingle _ = False
+
 fromSingle :: Register -> Text.Text
 fromSingle (Single t) = t
 fromSingle _ = ""

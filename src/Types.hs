@@ -39,6 +39,7 @@ data Mode = CommandMode
 -- |Single means that there's a text without newlines. Multi means multiple
 -- lines, the bool significes whether they start on a new line.
 data Register = Single Text.Text | Multi [Text.Text] Bool
+    deriving (Show)
 
 type Registers = Map.Map Text.Text Register
 
@@ -65,7 +66,7 @@ data Command = CmdAmount Int
     | CmdOpenLineBefore
     | CmdPageDown
     | CmdPageUp
-    | CmdPaste
+    | CmdPasteAfter
     | CmdQuit
     | CmdRedo
     | CmdRedrawScreen
@@ -124,6 +125,7 @@ data Action = ActIdle
     | ActNextWordEnding Int
     | ActReplaceMode
     | ActReplaceCharAndMove Char
+    | ActPasteAfter Int
     deriving (Show)
 
 -- |All the events, which resemble disk operations or GUI changes

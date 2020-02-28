@@ -52,6 +52,7 @@ isChangeAction (ActJoinLine _) = True
 isChangeAction (ActReplaceChar _ _) = True
 isChangeAction (ActInsertMode) = True
 isChangeAction (ActCommandMode) = True
+isChangeAction (ActPasteAfter _) = True
 isChangeAction _ = False
 
 addDotInput :: State.State -> Char -> State.State
