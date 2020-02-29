@@ -274,7 +274,7 @@ paste buffer _ _ 0 = Just buffer
 paste buffer pos (Single text) n =
     insertText buffer pos (Text.replicate n text) True
 paste buffer pos (Multi ls True) n =
-    insertLines buffer pos (ls) True
+    insertLines buffer pos (take (n * length ls) (cycle ls)) True
 paste buffer _ _ _ = Just buffer
 
 deleteLines :: Buffer -> Int -> Int -> Bool -> Maybe (Buffer, [Text.Text])

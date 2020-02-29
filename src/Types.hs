@@ -67,6 +67,7 @@ data Command = CmdAmount Int
     | CmdPageDown
     | CmdPageUp
     | CmdPasteAfter
+    | CmdPasteBefore
     | CmdQuit
     | CmdRedo
     | CmdRedrawScreen
@@ -126,6 +127,7 @@ data Action = ActIdle
     | ActReplaceMode
     | ActReplaceCharAndMove Char
     | ActPasteAfter Int
+    | ActPasteBefore Int
     deriving (Show)
 
 -- |All the events, which resemble disk operations or GUI changes

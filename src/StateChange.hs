@@ -329,7 +329,7 @@ changeState state (ActReplaceCharAndMove c) = do
     newBuffer <- Buffer.replaceChar buffer pos c True
     advanceCursor $ replaceBuffer state newBuffer
 
--- Paste
+-- Paste after
 changeState state (ActPasteAfter n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
     let pos@(row, _) = Window.cursorPos window
@@ -346,7 +346,6 @@ changeState state (ActPasteAfter n) = do
             (Multi _ False) -> State.setCursorPos state window $
                 Buffer.closestPos newBuffer False $
                 addPos pos (0, 1)
-            -- TODO go to first non whitespace
             (Multi [] _) -> state
             (Multi (t:_) True) -> State.setCursorPos state window $
                 (row + 1, Text.length (Text.takeWhile isSpace t))
@@ -355,6 +354,14 @@ changeState state (ActPasteAfter n) = do
         sameLine (Single _) = True
         sameLine (Multi _ False) = True
         sameLine _ = False
+
+-- Paste before
+changeState state (ActPasteBefore n) = do
+    (window, buffer) <- getActiveWindowAndBuffer state
+    let pos@(row, _) = Window.cursorPos window
+    let register = State.getRegister state "default"
+    newBuffer <- Buffer.paste buffer pos register n
+    noEvents $ replaceBuffer state newBuffer
 
 changeState state ActAdvanceCursor = advanceCursor state
 changeState state ActRedrawScreen = Just (state, [EvRedrawScreen])
