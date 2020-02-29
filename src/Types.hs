@@ -57,6 +57,8 @@ data Command = CmdAmount Int
     | CmdNextWord
     | CmdPrevWord
     | CmdNextWordEnding
+    | CmdIndent
+    | CmdOutdent
     | CmdInsertChar Char
     | CmdInsertMode
     | CmdInsertModeBefore
@@ -106,6 +108,8 @@ data Action = ActIdle
     | ActInsertMode
     | ActAdvanceCursor
     | ActInsertNewLine
+    | ActIndent Int [Action]
+    | ActOutdent Int [Action]
     | ActPageDown Int
     | ActPageUp Int
     | ActQuit

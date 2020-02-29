@@ -124,10 +124,6 @@ changeState state (ActNextWord n) = do
              (newState, _) <- moveCursor state (0, ind)
              changeState newState $ ActNextWord $ n - 1
 
--- The ActPrevWord situation is a bit longer than I would like, but I have to
--- do some additional checks when moving up one row. You either have to move one
--- extra word to the left, or not, depending on whether you landed on a word of 1
--- character or more.
 changeState state (ActPrevWord 0) = Just (state, [])
 changeState state (ActPrevWord n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
@@ -358,7 +354,7 @@ changeState state (ActPasteAfter n) = do
 -- Paste before
 changeState state (ActPasteBefore n) = do
     (window, buffer) <- getActiveWindowAndBuffer state
-    let pos@(row, _) = Window.cursorPos window
+    let pos = Window.cursorPos window
     let register = State.getRegister state "default"
     newBuffer <- Buffer.paste buffer pos register n
     noEvents $ replaceBuffer state newBuffer
@@ -385,7 +381,8 @@ wordEndOffset state = do
         match c1 c2 =
             isWordSeparator c1 == isWordSeparator c2 && not (isSpace c2)
 
--- |Fold a bunch of actions resembling motions over a given ChangedState
+-- |Fold a bunch of actions over a given ChangedState. If one of the actions
+-- fail you will get the new state up to that point instead of Nothing.
 foldActions :: ChangedState -> [Action] -> ChangedState
 foldActions Nothing _ = Nothing
 foldActions (Just (state, _)) [] = Just (state, [])

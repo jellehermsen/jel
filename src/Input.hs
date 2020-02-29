@@ -189,27 +189,36 @@ parseInput CommandMode [] (Curses.EventCharacter 'P') = Right $ matchActions [Cm
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter '.') = Right $ matchActions [CmdAmount n, CmdRepeat]
 parseInput CommandMode [] (Curses.EventCharacter '.') = Right $ matchActions [CmdRepeat]
 
+-- Replace Mode
 parseInput CommandMode [] (Curses.EventCharacter 'R') = Right $ matchActions [CmdReplaceMode]
-
--- Quit on ctrl-q
-parseInput _ _ (Curses.EventCharacter '\DC1') = Right [ActQuit]
 
 -- Delete sections
 parseInput CommandMode [CmdAmount n] (Curses.EventCharacter 'd') = Left [CmdDelete n]
 parseInput CommandMode [] (Curses.EventCharacter 'd') = Left [CmdDelete 1]
 parseInput CommandMode [CmdDelete n] (Curses.EventCharacter 'd') = Right $ matchActions [CmdDeleteLine n]
+parseInput CommandMode coms@((CmdDelete n):_) (eChar) = parseMotions coms (ActDelete n) eChar
 
-parseInput CommandMode ((CmdDelete n):xs) (eChar) =
+-- Quit on ctrl-q
+parseInput _ _ (Curses.EventCharacter '\DC1') = Right [ActQuit]
+parseInput _ _ _ = Left []
+
+-- |Tries to decide whether the tail of a given list of commands resembles a
+-- motion. If it does it gives you the full action, the given partial action
+-- completed with the motion actions. If it does not it fails with an
+-- ActErrorMessage.
+-- This function can be used with commands that can operate on motions like
+-- CmdDelete, or CmdIndent.
+parseMotions :: [Command] -> ([Action] -> Action) -> Curses.Event -> Either [Command] [Action]
+parseMotions [] _ _ = Left []
+parseMotions (command:xs) action eChar =
     case (isMotion possibleMotion) of
         NoMotion      -> Right $ [ActErrorMessage "Invalid motion"]
-        CouldBeMotion -> Left $ ((CmdDelete n):motionCommands)
-        Motion        -> Right $ [ActFlagUndoPoint, ActDelete n motionActions]
+        CouldBeMotion -> Left $ (command:motionCommands)
+        Motion        -> Right $ [ActFlagUndoPoint, action motionActions]
     where
         possibleMotion = parseInput CommandMode xs eChar
         motionActions = actions possibleMotion
         motionCommands = commands possibleMotion
-
-parseInput _ _ _ = Left []
 
 -- Map a list of commands to a list of actions
 matchActions :: [Command] -> [Action]
